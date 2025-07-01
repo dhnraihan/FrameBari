@@ -1,0 +1,298 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{{ project.name }} - FrameBari{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <!-- Project Header -->
+    <div class="row mb-4">
+        <div class="col-md-8">
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="{% url 'editor:projects' %}">Projects</a></li>
+                    <li class="breadcrumb-item active">{{ project.name|default:"Untitled Project" }}</li>
+                </ol>
+            </nav>
+            <h2>{{ project.name|default:"Untitled Project" }}</h2>
+            <p class="text-muted">{{ project.description|default:"No description" }}</p>
+        </div>
+        <div class="col-md-4 text-end">
+            <div class="btn-group">
+                <button class="btn btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#uploadModal">
+                    <i class="fas fa-upload"></i> Add Photos
+                </button>
+                <button class="btn btn-primary" onclick="selectAllPhotos()">
+                    <i class="fas fa-check-square"></i> Select All
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toolbar -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-body py-2">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div class="toolbar-left">
+                            <span class="text-muted">
+                                {{ page_obj.paginator.count|default:0 }} photos
+                                <span id="selectedCount" style="display: none;"> • <span id="selectedNumber">0</span> selected</span>
+                            </span>
+                        </div>
+                        <div class="toolbar-right">
+                            <div class="btn-group btn-group-sm">
+                                <button class="btn btn-outline-secondary" onclick="toggleView('grid')" id="gridViewBtn">
+                                    <i class="fas fa-th"></i>
+                                </button>
+                                <button class="btn btn-outline-secondary" onclick="toggleView('list')" id="listViewBtn">
+                                    <i class="fas fa-list"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Bulk Actions -->
+                    <div id="bulkActions" class="mt-2" style="display: none;">
+                        <div class="btn-group btn-group-sm">
+                            <button class="btn btn-primary" onclick="batchEdit()">
+                                <i class="fas fa-edit"></i> Batch Edit
+                            </button>
+                            <button class="btn btn-success" onclick="downloadSelected()">
+                                <i class="fas fa-download"></i> Download
+                            </button>
+                            <button class="btn btn-danger" onclick="deleteSelected()">
+                                <i class="fas fa-trash"></i> Delete
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Photos Grid -->
+    <div id="photosContainer">
+        {% if page_obj %}
+            <div class="row g-3" id="photoGrid">
+                {% for photo in page_obj %}
+                    <div class="col-lg-2 col-md-3 col-sm-4 col-6 photo-item" data-photo-id="{{ photo.id }}">
+                        <div class="photo-card">
+                            <div class="photo-selection">
+                                <input type="checkbox" class="photo-checkbox" value="{{ photo.id }}">
+                            </div>
+                            <div class="photo-status">
+                                <span class="badge bg-{{ photo.status|default:'pending'|status_color }}">
+                                    {{ photo.get_status_display|default:'Pending' }}
+                                </span>
+                            </div>
+                            <img src="{% if photo.thumbnail %}{{ photo.thumbnail.url }}{% else %}https://via.placeholder.com/200{% endif %}" 
+                                 class="img-fluid rounded" 
+                                 alt="Photo"
+                                 onclick="openEditor('{{ photo.id }}')">
+                            <div class="photo-overlay">
+                                <div class="photo-actions">
+                                    <button class="btn btn-sm btn-primary" onclick="openEditor('{{ photo.id }}')">
+                                        <i class="fas fa-edit"></i>
+                                    </button>
+                                    <button class="btn btn-sm btn-success" onclick="downloadPhoto('{{ photo.id }}')">
+                                        <i class="fas fa-download"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                {% endfor %}
+            </div>
+        {% else %}
+            <div class="text-center py-5">
+                <i class="fas fa-images fa-4x text-muted mb-4"></i>
+                <h4>No photos in this project</h4>
+                <p class="text-muted mb-4">Start by uploading some photos to edit</p>
+                <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#uploadModal">
+                    <i class="fas fa-upload"></i> Upload Photos
+                </button>
+            </div>
+        {% endif %}
+    </div>
+
+    <!-- Pagination -->
+    {% if page_obj.has_other_pages %}
+        {% include 'includes/pagination.html' %}
+    {% endif %}
+</div>
+
+<!-- Upload Modal -->
+{% include 'editor/components/modal_upload.html' %}
+{% endblock %}
+
+{% block extra_css %}
+<style>
+.photo-card {
+    position: relative;
+    cursor: pointer;
+    border-radius: 8px;
+    overflow: hidden;
+    transition: transform 0.2s ease;
+}
+
+.photo-card:hover {
+    transform: scale(1.02);
+}
+
+.photo-card img {
+    aspect-ratio: 1;
+    object-fit: cover;
+    width: 100%;
+}
+
+.photo-selection {
+    position: absolute;
+    top: 8px;
+    left: 8px;
+    z-index: 10;
+}
+
+.photo-status {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    z-index: 10;
+}
+
+.photo-overlay {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: linear-gradient(transparent, rgba(0,0,0,0.7));
+    padding: 20px 8px 8px;
+    transform: translateY(100%);
+    transition: transform 0.3s ease;
+}
+
+.photo-card:hover .photo-overlay {
+    transform: translateY(0);
+}
+
+.photo-actions {
+    display: flex;
+    gap: 4px;
+    justify-content: center;
+}
+
+.toolbar-left, .toolbar-right {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+#bulkActions {
+    border-top: 1px solid #dee2e6;
+    padding-top: 8px;
+}
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+let selectedPhotos = new Set();
+
+function openEditor(photoId) {
+    window.location.href = `/editor/${photoId}/`;
+}
+
+function selectAllPhotos() {
+    const checkboxes = document.querySelectorAll('.photo-checkbox');
+    const allSelected = Array.from(checkboxes).every(cb => cb.checked);
+    
+    checkboxes.forEach(cb => {
+        cb.checked = !allSelected;
+        updateSelection(cb);
+    });
+}
+
+function updateSelection(checkbox) {
+    if (checkbox.checked) {
+        selectedPhotos.add(checkbox.value);
+    } else {
+        selectedPhotos.delete(checkbox.value);
+    }
+    
+    updateUI();
+}
+
+function updateUI() {
+    const selectedCount = document.getElementById('selectedCount');
+    const selectedNumber = document.getElementById('selectedNumber');
+    const bulkActions = document.getElementById('bulkActions');
+    
+    if (selectedPhotos.size > 0) {
+        selectedCount.style.display = 'inline';
+        bulkActions.style.display = 'block';
+        selectedNumber.textContent = selectedPhotos.size;
+    } else {
+        selectedCount.style.display = 'none';
+        bulkActions.style.display = 'none';
+    }
+}
+
+function toggleView(view) {
+    const gridBtn = document.getElementById('gridViewBtn');
+    const listBtn = document.getElementById('listViewBtn');
+    
+    if (view === 'grid') {
+        gridBtn.classList.add('active');
+        listBtn.classList.remove('active');
+        // Implement grid view
+    } else {
+        listBtn.classList.add('active');
+        gridBtn.classList.remove('active');
+        // Implement list view
+    }
+}
+
+function batchEdit() {
+    if (selectedPhotos.size === 0) return;
+    
+    const photoIds = Array.from(selectedPhotos);
+    window.location.href = `/editor/batch/?photos=${photoIds.join(',')}`;
+}
+
+function downloadSelected() {
+    if (selectedPhotos.size === 0) return;
+    
+    showMessage('Preparing download...', 'info');
+    // Implement download functionality
+}
+
+function deleteSelected() {
+    if (selectedPhotos.size === 0) return;
+    
+    if (confirm(`Delete ${selectedPhotos.size} selected photos?`)) {
+        // Implement delete functionality
+        showMessage('Photos deleted successfully!', 'success');
+        setTimeout(() => location.reload(), 1000);
+    }
+}
+
+function downloadPhoto(photoId) {
+    showMessage('Downloading photo...', 'info');
+    // Implement single photo download
+}
+
+// Event listeners
+document.addEventListener('DOMContentLoaded', function() {
+    // Add change listeners to checkboxes
+    document.querySelectorAll('.photo-checkbox').forEach(checkbox => {
+        checkbox.addEventListener('change', function() {
+            updateSelection(this);
+        });
+    });
+    
+    // Set initial view
+    toggleView('grid');
+});
+</script>
+{% endblock %}

@@ -1,0 +1,166 @@
+<div class="sidebar-content p-3">
+    <div id="enhanceTools" class="tool-panel">
+        <h6 class="mb-3">Enhance</h6>
+        
+        <!-- Brightness -->
+        <div class="mb-3">
+            <label class="form-label">Brightness</label>
+            <input type="range" class="form-range" min="-100" max="100" value="0" 
+                   id="brightnessSlider" onchange="updateSetting('brightness', this.value)">
+            <div class="d-flex justify-content-between">
+                <small class="text-muted">-100</small>
+                <small class="text-muted">0</small>
+                <small class="text-muted">100</small>
+            </div>
+        </div>
+        
+        <!-- Contrast -->
+        <div class="mb-3">
+            <label class="form-label">Contrast</label>
+            <input type="range" class="form-range" min="-100" max="100" value="0" 
+                   id="contrastSlider" onchange="updateSetting('contrast', this.value)">
+        </div>
+        
+        <!-- Saturation -->
+        <div class="mb-3">
+            <label class="form-label">Saturation</label>
+            <input type="range" class="form-range" min="-100" max="100" value="0" 
+                   id="saturationSlider" onchange="updateSetting('saturation', this.value)">
+        </div>
+        
+        <!-- Auto Enhance Button -->
+        <button class="btn btn-primary w-100 mb-3" onclick="autoEnhance()">
+            <i class="fas fa-magic"></i> Auto Enhance
+        </button>
+        
+        <!-- Reset Button -->
+        <button class="btn btn-outline-secondary w-100" onclick="resetSettings()">
+            <i class="fas fa-undo"></i> Reset
+        </button>
+    </div>
+    
+    <div id="filtersTools" class="tool-panel" style="display: none;">
+        <h6 class="mb-3">Filters</h6>
+        
+        <div class="filter-grid">
+            <div class="filter-item" onclick="applyFilter('vintage')">
+                <div class="filter-preview"></div>
+                <small>Vintage</small>
+            </div>
+            <div class="filter-item" onclick="applyFilter('bw')">
+                <div class="filter-preview"></div>
+                <small>B&W</small>
+            </div>
+            <div class="filter-item" onclick="applyFilter('sepia')">
+                <div class="filter-preview"></div>
+                <small>Sepia</small>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function updateSetting(setting, value) {
+    currentSettings[setting] = parseInt(value);
+    // Preview changes in real-time
+    generatePreview();
+}
+
+function generatePreview() {
+    // Debounce preview generation
+    clearTimeout(window.previewTimeout);
+    window.previewTimeout = setTimeout(() => {
+        fetch(`/editor/{{ photo.id }}/preview/`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+            },
+            body: JSON.stringify(currentSettings)
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                document.getElementById('photoCanvas').src = data.preview_url + '?t=' + Date.now();
+            }
+        });
+    }, 300);
+}
+
+function autoEnhance() {
+    // Apply automatic enhancement
+    currentSettings = {
+        brightness: 10,
+        contrast: 15,
+        saturation: 5,
+        vibrance: 10,
+        exposure: 5
+    };
+    
+    // Update sliders
+    document.getElementById('brightnessSlider').value = currentSettings.brightness;
+    document.getElementById('contrastSlider').value = currentSettings.contrast;
+    document.getElementById('saturationSlider').value = currentSettings.saturation;
+    
+    generatePreview();
+}
+
+function resetSettings() {
+    currentSettings = {
+        brightness: 0,
+        contrast: 0,
+        saturation: 0,
+        vibrance: 0,
+        exposure: 0
+    };
+    
+    // Reset sliders
+    document.querySelectorAll('.form-range').forEach(slider => {
+        slider.value = 0;
+    });
+    
+    generatePreview();
+}
+
+function applyFilter(filterName) {
+    showMessage(`${filterName} filter applied!`, 'success');
+    // Implement filter application
+}
+</script>
+
+<style>
+.tool-panel {
+    animation: fadeIn 0.3s ease;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.filter-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+}
+
+.filter-item {
+    text-align: center;
+    cursor: pointer;
+    padding: 10px;
+    border-radius: 8px;
+    transition: background-color 0.2s;
+}
+
+.filter-item:hover {
+    background-color: #f8f9fa;
+}
+
+.filter-preview {
+    width: 100%;
+    height: 60px;
+    background: linear-gradient(45deg, #ccc, #999);
+    border-radius: 4px;
+    margin-bottom: 5px;
+}
+</style>

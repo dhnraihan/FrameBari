@@ -1,63 +1,280 @@
-<!-- templates/editor/editor.html -->
-<div id="photo-editor">
-    <div class="toolbar">
-        <div class="tool-group">
-            <label>Brightness</label>
-            <input type="range" id="brightness" min="-100" max="100" value="{{ settings.brightness }}">
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Photo Editor - FrameBari{% endblock %}
+
+{% block content %}
+<div class="editor-container">
+    <!-- Editor Header -->
+    <div class="editor-header">
+        <div class="container-fluid">
+            <div class="row align-items-center py-2">
+                <div class="col-md-3">
+                    <div class="d-flex align-items-center">
+                        <a href="{% url 'editor:dashboard' %}" class="btn btn-outline-secondary btn-sm me-2">
+                            <i class="fas fa-arrow-left"></i>
+                        </a>
+                        <h6 class="mb-0">Photo Editor</h6>
+                    </div>
+                </div>
+                <div class="col-md-6 text-center">
+                    <div class="editor-tools">
+                        <div class="btn-group btn-group-sm">
+                            <button class="btn btn-outline-primary active" data-tool="enhance">
+                                <i class="fas fa-magic"></i> Enhance
+                            </button>
+                            <button class="btn btn-outline-primary" data-tool="filters">
+                                <i class="fas fa-palette"></i> Filters
+                            </button>
+                            <button class="btn btn-outline-primary" data-tool="background">
+                                <i class="fas fa-cut"></i> Background
+                            </button>
+                            <button class="btn btn-outline-primary" data-tool="effects">
+                                <i class="fas fa-star"></i> Effects
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3 text-end">
+                    <div class="btn-group btn-group-sm">
+                        <button class="btn btn-success" onclick="savePhoto()">
+                            <i class="fas fa-save"></i> Save
+                        </button>
+                        <button class="btn btn-primary" onclick="exportPhoto()">
+                            <i class="fas fa-download"></i> Export
+                        </button>
+                    </div>
+                </div>
+            </div>
         </div>
-        
-        <div class="tool-group">
-            <label>Contrast</label>
-            <input type="range" id="contrast" min="-100" max="100" value="{{ settings.contrast }}">
-        </div>
-        
-        <div class="tool-group">
-            <label>Background Color</label>
-            <input type="color" id="bg-color" value="{{ settings.background_color }}">
-        </div>
-        
-        <div class="tool-group">
-            <label>Background Style</label>
-            <select id="bg-style">
-                <option value="solid">Solid</option>
-                <option value="gradient">Gradient</option>
-                <option value="wave">Wave</option>
-            </select>
-        </div>
-        
-        <button id="apply-effects">Apply Effects</button>
-        <button id="detect-subjects">Detect Subjects</button>
-        <button id="remove-background">Remove Background</button>
     </div>
-    
-    <div class="canvas-container">
-        <img id="main-image" src="{{ photo.original_image.url }}" alt="Photo">
-        <div id="subject-overlays"></div>
+
+    <!-- Editor Content -->
+    <div class="editor-content">
+        <div class="row g-0 h-100">
+            <!-- Left Sidebar -->
+            <div class="col-md-3 editor-sidebar">
+                {% include 'editor/components/sidebar.html' %}
+            </div>
+
+            <!-- Main Canvas -->
+            <div class="col-md-6 editor-canvas">
+                <div class="canvas-container">
+                    <div class="canvas-wrapper">
+                        <img id="photoCanvas" src="{% if photo.processed_image %}{{ photo.processed_image.url }}{% else %}{{ photo.original_image.url }}{% endif %}" 
+                             alt="Photo" class="img-fluid">
+                        <div id="loadingOverlay" class="loading-overlay" style="display: none;">
+                            <div class="text-center">
+                                <div class="spinner-border text-primary mb-2"></div>
+                                <p>Processing...</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right Panel -->
+            <div class="col-md-3 editor-panel">
+                {% include 'editor/components/toolbar.html' %}
+            </div>
+        </div>
     </div>
 </div>
+{% endblock %}
 
-<script>
-document.getElementById('apply-effects').addEventListener('click', function() {
-    const settings = {
-        brightness: document.getElementById('brightness').value,
-        contrast: document.getElementById('contrast').value,
-        background_color: document.getElementById('bg-color').value,
-        background_style: document.getElementById('bg-style').value,
-        replace_background: true
-    };
+{% block extra_css %}
+<style>
+.editor-container {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    display: flex;
+    flex-direction: column;
+    background: #f8f9fa;
+}
+
+.editor-header {
+    background: white;
+    border-bottom: 1px solid #dee2e6;
+    flex-shrink: 0;
+}
+
+.editor-content {
+    flex: 1;
+    overflow: hidden;
+}
+
+.editor-sidebar, .editor-panel {
+    background: white;
+    border-right: 1px solid #dee2e6;
+    overflow-y: auto;
+}
+
+.editor-panel {
+    border-right: none;
+    border-left: 1px solid #dee2e6;
+}
+
+.editor-canvas {
+    background: #f0f0f0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+}
+
+.canvas-container {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+}
+
+.canvas-wrapper {
+    position: relative;
+    max-width: 100%;
+    max-height: 100%;
+}
+
+#photoCanvas {
+    max-width: 100%;
+    max-height: 100%;
+    border-radius: 8px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+}
+
+.loading-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(255,255,255,0.9);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 8px;
+}
+
+.editor-tools .btn-group {
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+@media (max-width: 768px) {
+    .editor-content .row {
+        flex-direction: column;
+    }
     
+    .editor-sidebar, .editor-panel {
+        position: relative;
+        height: auto;
+        max-height: 200px;
+    }
+}
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+let currentTool = 'enhance';
+let currentSettings = {
+    brightness: 0,
+    contrast: 0,
+    saturation: 0,
+    vibrance: 0,
+    exposure: 0
+};
+
+function switchTool(tool) {
+    currentTool = tool;
+    
+    // Update active button
+    document.querySelectorAll('[data-tool]').forEach(btn => {
+        btn.classList.remove('active');
+    });
+    document.querySelector(`[data-tool="${tool}"]`).classList.add('active');
+    
+    // Update sidebar content
+    updateSidebar(tool);
+}
+
+function updateSidebar(tool) {
+    // This would dynamically load different tool options
+    const sidebar = document.querySelector('.editor-sidebar');
+    // Implementation depends on the tool
+}
+
+function applyChanges() {
+    const loadingOverlay = document.getElementById('loadingOverlay');
+    loadingOverlay.style.display = 'flex';
+    
+    // Send settings to backend
     fetch(`/editor/{{ photo.id }}/apply/`, {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
+            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
         },
-        body: JSON.stringify(settings)
+        body: JSON.stringify(currentSettings)
     })
     .then(response => response.json())
     .then(data => {
         if (data.success) {
-            document.getElementById('main-image').src = data.processed_url + '?t=' + new Date().getTime();
+            // Update canvas with processed image
+            document.getElementById('photoCanvas').src = data.processed_url + '?t=' + Date.now();
+            showMessage('Changes applied successfully!', 'success');
+        } else {
+            showMessage('Failed to apply changes', 'error');
         }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        showMessage('An error occurred', 'error');
+    })
+    .finally(() => {
+        loadingOverlay.style.display = 'none';
     });
+}
+
+function savePhoto() {
+    showMessage('Photo saved successfully!', 'success');
+}
+
+function exportPhoto() {
+    window.location.href = `/editor/{{ photo.id }}/download/`;
+}
+
+// Event listeners
+document.addEventListener('DOMContentLoaded', function() {
+    // Tool switching
+    document.querySelectorAll('[data-tool]').forEach(btn => {
+        btn.addEventListener('click', function() {
+            switchTool(this.dataset.tool);
+        });
+    });
+    
+    // Initialize with enhance tool
+    switchTool('enhance');
+});
+
+// Keyboard shortcuts
+document.addEventListener('keydown', function(e) {
+    if (e.ctrlKey || e.metaKey) {
+        switch(e.key) {
+            case 's':
+                e.preventDefault();
+                savePhoto();
+                break;
+            case 'e':
+                e.preventDefault();
+                exportPhoto();
+                break;
+        }
+    }
 });
 </script>
+{% endblock %}

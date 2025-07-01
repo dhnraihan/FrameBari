@@ -1,6 +1,6 @@
-<!-- templates/editor/dashboard.html -->
 {% extends 'base.html' %}
 {% load static %}
+{% load editor_filters %}
 
 {% block title %}Dashboard - FrameBari{% endblock %}
 
@@ -26,7 +26,7 @@
                 <div class="card-body">
                     <div class="d-flex justify-content-between">
                         <div>
-                            <h4>{{ total_photos }}</h4>
+                            <h4>{{ total_photos|default:0 }}</h4>
                             <p class="mb-0">Total Photos</p>
                         </div>
                         <div class="align-self-center">
@@ -42,7 +42,7 @@
                 <div class="card-body">
                     <div class="d-flex justify-content-between">
                         <div>
-                            <h4>{{ completed_photos }}</h4>
+                            <h4>{{ completed_photos|default:0 }}</h4>
                             <p class="mb-0">Processed</p>
                         </div>
                         <div class="align-self-center">
@@ -58,7 +58,7 @@
                 <div class="card-body">
                     <div class="d-flex justify-content-between">
                         <div>
-                            <h4>{{ profile.photos_processed_this_month }}/{{ profile.max_photos_per_month }}</h4>
+                            <h4>{{ profile.photos_processed_this_month|default:0 }}/{{ profile.max_photos_per_month|default:10 }}</h4>
                             <p class="mb-0">Monthly Usage</p>
                         </div>
                         <div class="align-self-center">
@@ -66,7 +66,7 @@
                         </div>
                     </div>
                     <div class="progress mt-2" style="height: 5px;">
-                        <div class="progress-bar" style="width: {{ usage_percentage }}%"></div>
+                        <div class="progress-bar" style="width: {{ usage_percentage|default:0 }}%"></div>
                     </div>
                 </div>
             </div>
@@ -77,7 +77,7 @@
                 <div class="card-body">
                     <div class="d-flex justify-content-between">
                         <div>
-                            <h4>{{ storage_percentage|floatformat:1 }}%</h4>
+                            <h4>{{ storage_percentage|default:0|floatformat:1 }}%</h4>
                             <p class="mb-0">Storage Used</p>
                         </div>
                         <div class="align-self-center">
@@ -85,7 +85,7 @@
                         </div>
                     </div>
                     <div class="progress mt-2" style="height: 5px;">
-                        <div class="progress-bar" style="width: {{ storage_percentage }}%"></div>
+                        <div class="progress-bar" style="width: {{ storage_percentage|default:0 }}%"></div>
                     </div>
                 </div>
             </div>
@@ -109,12 +109,12 @@
                                         <div class="card-body">
                                             <h6 class="card-title">{{ project.name }}</h6>
                                             <p class="card-text text-muted">
-                                                {{ project.photo_set.count }} photo{{ project.photo_set.count|pluralize }}
+                                                {{ project.photo_set.count|default:0 }} photo{{ project.photo_set.count|default:0|pluralize_bangla }}
                                             </p>
                                             <p class="card-text">
-                                                <small class="text-muted">Updated {{ project.updated_at|timesince }} ago</small>
+                                                <small class="text-muted">Updated recently</small>
                                             </p>
-                                            <a href="{% url 'editor:project_detail' project.id %}" class="btn btn-sm btn-primary">
+                                            <a href="#" class="btn btn-sm btn-primary">
                                                 Open Project
                                             </a>
                                         </div>
@@ -147,12 +147,14 @@
                             {% for photo in recent_photos %}
                                 <div class="col-md-2 col-sm-3 col-4 mb-3">
                                     <div class="photo-thumbnail">
-                                        <img src="{% if photo.thumbnail %}{{ photo.thumbnail.url }}{% else %}{{ photo.original_image.url }}{% endif %}" 
+                                        <img src="{% if photo.thumbnail %}{{ photo.thumbnail.url }}{% else %}https://via.placeholder.com/150{% endif %}" 
                                              class="img-fluid rounded" 
                                              alt="Photo thumbnail"
                                              onclick="openPhoto('{{ photo.id }}')">
                                         <div class="photo-overlay">
-                                            <span class="badge bg-{{ photo.status|status_color }}">{{ photo.get_status_display }}</span>
+                                            <span class="badge bg-{{ photo.status|default:'pending'|status_color }}">
+                                                {{ photo.get_status_display|default:'Pending' }}
+                                            </span>
                                         </div>
                                     </div>
                                 </div>
@@ -163,6 +165,9 @@
                             <i class="fas fa-image fa-3x text-muted mb-3"></i>
                             <h5>No photos yet</h5>
                             <p class="text-muted">Upload photos to start editing!</p>
+                            <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#uploadModal">
+                                <i class="fas fa-upload me-2"></i>Upload Your First Photo
+                            </button>
                         </div>
                     {% endif %}
                 </div>
@@ -260,64 +265,68 @@ function openPhoto(photoId) {
 }
 
 // Drag and drop functionality
-const uploadArea = document.getElementById('upload-area');
-const photoInput = document.getElementById('photo-input');
+document.addEventListener('DOMContentLoaded', function() {
+    const uploadArea = document.getElementById('upload-area');
+    const photoInput = document.getElementById('photo-input');
 
-uploadArea.addEventListener('dragover', (e) => {
-    e.preventDefault();
-    uploadArea.classList.add('dragover');
-});
-
-uploadArea.addEventListener('dragleave', () => {
-    uploadArea.classList.remove('dragover');
-});
-
-uploadArea.addEventListener('drop', (e) => {
-    e.preventDefault();
-    uploadArea.classList.remove('dragover');
-    const files = e.dataTransfer.files;
-    handleFiles(files);
-});
-
-photoInput.addEventListener('change', (e) => {
-    handleFiles(e.target.files);
-});
-
-function handleFiles(files) {
-    if (files.length === 0) return;
-    
-    const formData = new FormData();
-    for (let file of files) {
-        formData.append('photos', file);
-    }
-    
-    const progressContainer = document.getElementById('upload-progress');
-    const progressBar = progressContainer.querySelector('.progress-bar');
-    
-    progressContainer.style.display = 'block';
-    
-    fetch('{% url "editor:upload" %}', {
-        method: 'POST',
-        body: formData,
-        headers: {
-            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
-        }
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.success) {
-            location.reload();
-        } else {
-            alert('Upload failed: ' + data.error);
-        }
-    })
-    .catch(error => {
-        console.error('Upload error:', error);
-        alert('Upload failed');
-    })
-    .finally(() => {
-        progressContainer.style.display = 'none';
+    uploadArea.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        uploadArea.classList.add('dragover');
     });
-}
+
+    uploadArea.addEventListener('dragleave', () => {
+        uploadArea.classList.remove('dragover');
+    });
+
+    uploadArea.addEventListener('drop', (e) => {
+        e.preventDefault();
+        uploadArea.classList.remove('dragover');
+        const files = e.dataTransfer.files;
+        handleFiles(files);
+    });
+
+    photoInput.addEventListener('change', (e) => {
+        handleFiles(e.target.files);
+    });
+
+    function handleFiles(files) {
+        if (files.length === 0) return;
+        
+        const formData = new FormData();
+        for (let file of files) {
+            formData.append('photos', file);
+        }
+        
+        const progressContainer = document.getElementById('upload-progress');
+        const progressBar = progressContainer.querySelector('.progress-bar');
+        
+        progressContainer.style.display = 'block';
+        
+        fetch('{% url "editor:upload" %}', {
+            method: 'POST',
+            body: formData,
+            headers: {
+                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+                'X-Requested-With': 'XMLHttpRequest'
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                showMessage(data.message, 'success');
+                setTimeout(() => location.reload(), 1000);
+            } else {
+                showMessage('Upload failed: ' + data.error, 'error');
+            }
+        })
+        .catch(error => {
+            console.error('Upload error:', error);
+            showMessage('Upload failed', 'error');
+        })
+        .finally(() => {
+            progressContainer.style.display = 'none';
+        });
+    }
+});
 </script>
 {% endblock %}
