@@ -1,0 +1,386 @@
+<!-- templates/editor/batch_process.html -->
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Batch Processing - Photo Editor Pro{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="row">
+        <div class="col-md-8">
+            <h2>Batch Photo Processing</h2>
+            <p class="text-muted">Select multiple photos and apply the same effects to all of them.</p>
+            
+            <!-- Photo Selection Grid -->
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">Select Photos</h5>
+                    <div>
+                        <button class="btn btn-sm btn-outline-primary" onclick="selectAll()">Select All</button>
+                        <button class="btn btn-sm btn-outline-secondary" onclick="clearSelection()">Clear All</button>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="photo-selection-grid">
+                        {% for photo in photos %}
+                            <div class="photo-selection-item" data-photo-id="{{ photo.id }}">
+                                <input type="checkbox" class="photo-checkbox" id="photo-{{ photo.id }}" value="{{ photo.id }}">
+                                <label for="photo-{{ photo.id }}" class="photo-label">
+                                    <img src="{% if photo.thumbnail %}{{ photo.thumbnail.url }}{% else %}{{ photo.original_image.url }}{% endif %}" 
+                                         alt="Photo thumbnail" class="img-fluid">
+                                    <div class="selection-overlay">
+                                        <i class="fas fa-check"></i>
+                                    </div>
+                                </label>
+                            </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-4">
+            <!-- Batch Settings Panel -->
+            <div class="card sticky-top">
+                <div class="card-header">
+                    <h5 class="mb-0">Batch Settings</h5>
+                </div>
+                <div class="card-body">
+                    <form id="batch-form">
+                        {% csrf_token %}
+                        
+                        <!-- Basic Adjustments -->
+                        <div class="tool-group">
+                            <h6>Basic Adjustments</h6>
+                            <div class="slider-container">
+                                <label>Brightness</label>
+                                <input type="range" class="range-slider" name="brightness" 
+                                       min="-100" max="100" value="0">
+                                <span class="slider-value">0</span>
+                            </div>
+                            
+                            <div class="slider-container">
+                                <label>Contrast</label>
+                                <input type="range" class="range-slider" name="contrast" 
+                                       min="-100" max="100" value="0">
+                                <span class="slider-value">0</span>
+                            </div>
+                            
+                            <div class="slider-container">
+                                <label>Saturation</label>
+                                <input type="range" class="range-slider" name="saturation" 
+                                       min="-100" max="100" value="0">
+                                <span class="slider-value">0</span>
+                            </div>
+                        </div>
+                        
+                        <!-- Color Grading -->
+                        <div class="tool-group">
+                            <h6>Color Grading</h6>
+                            <select name="color_grade" class="form-select">
+                                <option value="">None</option>
+                                <option value="cinematic_warm">Cinematic Warm</option>
+                                <option value="cinematic_cool">Cinematic Cool</option>
+                                <option value="vintage">Vintage</option>
+                                <option value="dramatic">Dramatic</option>
+                                <option value="mono_blue">Mono Blue</option>
+                            </select>
+                        </div>
+                        
+                        <!-- Background -->
+                        <div class="tool-group">
+                            <h6>Background</h6>
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" name="replace_background" id="replace-bg">
+                                <label class="form-check-label" for="replace-bg">
+                                    Replace Background
+                                </label>
+                            </div>
+                            
+                            <select name="background_style" class="form-select mt-2">
+                                <option value="blue_default">Classic Blue</option>
+                                <option value="blue_neon">Neon Blue</option>
+                                <option value="blue_wave">Wave Blue</option>
+                                <option value="studio_light">Studio Light</option>
+                            </select>
+                        </div>
+                        
+                        <!-- Export Settings -->
+                        <div class="tool-group">
+                            <h6>Export Settings</h6>
+                            <select name="format" class="form-select">
+                                <option value="JPEG">JPEG</option>
+                                <option value="PNG">PNG</option>
+                                <option value="WEBP">WebP</option>
+                            </select>
+                            
+                            <div class="slider-container mt-2">
+                                <label>Quality</label>
+                                <input type="range" class="range-slider" name="quality" 
+                                       min="1" max="100" value="85">
+                                <span class="slider-value">85%</span>
+                            </div>
+                        </div>
+                        
+                        <!-- Process Button -->
+                        <button type="submit" class="btn btn-primary w-100" id="process-btn">
+                            <i class="fas fa-play"></i> Start Batch Processing
+                        </button>
+                        
+                        <div class="selected-count mt-3 text-center">
+                            <small class="text-muted">
+                                <span id="selected-count">0</span> photos selected
+                            </small>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Processing Modal -->
+    <div class="modal fade" id="processing-modal" tabindex="-1" data-bs-backdrop="static">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Processing Photos</h5>
+                </div>
+                <div class="modal-body text-center">
+                    <div class="progress mb-3">
+                        <div class="progress-bar" role="progressbar" style="width: 0%">0%</div>
+                    </div>
+                    <p id="processing-status">Preparing batch...</p>
+                    <p><span id="completed-count">0</span> of <span id="total-count">0</span> photos completed</p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" id="cancel-batch" disabled>Cancel</button>
+                    <button type="button" class="btn btn-primary" id="download-batch" style="display: none;">
+                        <i class="fas fa-download"></i> Download Results
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+.photo-selection-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+    gap: 1rem;
+}
+
+.photo-selection-item {
+    position: relative;
+    aspect-ratio: 1;
+}
+
+.photo-checkbox {
+    position: absolute;
+    opacity: 0;
+    pointer-events: none;
+}
+
+.photo-label {
+    display: block;
+    position: relative;
+    cursor: pointer;
+    border-radius: 8px;
+    overflow: hidden;
+    border: 2px solid transparent;
+    transition: all 0.3s ease;
+}
+
+.photo-label img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+}
+
+.selection-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 123, 255, 0.8);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+.selection-overlay i {
+    color: white;
+    font-size: 2rem;
+}
+
+.photo-checkbox:checked + .photo-label {
+    border-color: #007bff;
+    transform: scale(0.95);
+}
+
+.photo-checkbox:checked + .photo-label .selection-overlay {
+    opacity: 1;
+}
+
+.photo-label:hover {
+    transform: scale(1.02);
+}
+
+.sticky-top {
+    top: 20px;
+}
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+let selectedPhotos = new Set();
+let processingJob = null;
+
+document.addEventListener('DOMContentLoaded', function() {
+    // Update slider values
+    document.querySelectorAll('.range-slider').forEach(slider => {
+        slider.addEventListener('input', function() {
+            const valueDisplay = this.parentElement.querySelector('.slider-value');
+            let value = this.value;
+            if (this.name === 'quality') value += '%';
+            valueDisplay.textContent = value;
+        });
+    });
+    
+    // Track photo selection
+    document.querySelectorAll('.photo-checkbox').forEach(checkbox => {
+        checkbox.addEventListener('change', function() {
+            if (this.checked) {
+                selectedPhotos.add(this.value);
+            } else {
+                selectedPhotos.delete(this.value);
+            }
+            updateSelectedCount();
+        });
+    });
+    
+    // Handle form submission
+    document.getElementById('batch-form').addEventListener('submit', function(e) {
+        e.preventDefault();
+        startBatchProcessing();
+    });
+});
+
+function selectAll() {
+    document.querySelectorAll('.photo-checkbox').forEach(checkbox => {
+        checkbox.checked = true;
+        selectedPhotos.add(checkbox.value);
+    });
+    updateSelectedCount();
+}
+
+function clearSelection() {
+    document.querySelectorAll('.photo-checkbox').forEach(checkbox => {
+        checkbox.checked = false;
+    });
+    selectedPhotos.clear();
+    updateSelectedCount();
+}
+
+function updateSelectedCount() {
+    document.getElementById('selected-count').textContent = selectedPhotos.size;
+    document.getElementById('process-btn').disabled = selectedPhotos.size === 0;
+}
+
+async function startBatchProcessing() {
+    if (selectedPhotos.size === 0) {
+        alert('Please select at least one photo');
+        return;
+    }
+    
+    const formData = new FormData(document.getElementById('batch-form'));
+    const settings = Object.fromEntries(formData.entries());
+    
+    // Show processing modal
+    const modal = new bootstrap.Modal(document.getElementById('processing-modal'));
+    modal.show();
+    
+    document.getElementById('total-count').textContent = selectedPhotos.size;
+    
+    try {
+        const response = await fetch('/editor/batch/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+            },
+            body: JSON.stringify({
+                photo_ids: Array.from(selectedPhotos),
+                settings: settings
+            })
+        });
+        
+        const data = await response.json();
+        if (data.job_id) {
+            processingJob = data.job_id;
+            trackProgress(data.job_id);
+        }
+    } catch (error) {
+        console.error('Batch processing failed:', error);
+        alert('Failed to start batch processing');
+        modal.hide();
+    }
+}
+
+function trackProgress(jobId) {
+    const interval = setInterval(async () => {
+        try {
+            const response = await fetch(`/editor/batch/status/${jobId}/`);
+            const data = await response.json();
+            
+            updateProgress(data);
+            
+            if (data.status === 'SUCCESS' || data.status === 'FAILURE') {
+                clearInterval(interval);
+                handleCompletion(data.status);
+            }
+        } catch (error) {
+            console.error('Failed to get progress:', error);
+            clearInterval(interval);
+        }
+    }, 1000);
+}
+
+function updateProgress(data) {
+    const progressBar = document.querySelector('.progress-bar');
+    const progress = data.total > 0 ? (data.completed / data.total) * 100 : 0;
+    
+    progressBar.style.width = `${progress}%`;
+    progressBar.textContent = `${Math.round(progress)}%`;
+    
+    document.getElementById('completed-count').textContent = data.completed;
+    document.getElementById('processing-status').textContent = 
+        data.status === 'PENDING' ? 'Preparing...' : 
+        data.status === 'PROGRESS' ? 'Processing photos...' : 
+        data.status;
+}
+
+function handleCompletion(status) {
+    if (status === 'SUCCESS') {
+        document.getElementById('processing-status').textContent = 'All photos processed successfully!';
+        document.getElementById('download-batch').style.display = 'inline-block';
+        document.getElementById('cancel-batch').style.display = 'none';
+    } else {
+        document.getElementById('processing-status').textContent = 'Processing failed. Please try again.';
+    }
+}
+
+document.getElementById('download-batch').addEventListener('click', function() {
+    if (processingJob) {
+        window.location.href = `/editor/batch/download/${processingJob}/`;
+    }
+});
+</script>
+{% endblock %}

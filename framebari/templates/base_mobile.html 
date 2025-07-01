@@ -1,0 +1,113 @@
+<!-- templates/base_mobile.html -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>{% block title %}Photo Editor Pro{% endblock %}</title>
+    
+    <!-- PWA Meta Tags -->
+    <meta name="theme-color" content="#007bff">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="Photo Editor Pro">
+    
+    <!-- PWA Icons -->
+    <link rel="apple-touch-icon" href="{% static 'icons/icon-192x192.png' %}">
+    <link rel="icon" type="image/png" sizes="192x192" href="{% static 'icons/icon-192x192.png' %}">
+    <link rel="icon" type="image/png" sizes="512x512" href="{% static 'icons/icon-512x512.png' %}">
+    
+    <!-- PWA Manifest -->
+    <link rel="manifest" href="{% url 'pwa_manifest' %}">
+    
+    <!-- CSS -->
+    <link href="{% static 'css/mobile.css' %}" rel="stylesheet">
+    
+    {% block extra_css %}{% endblock %}
+</head>
+<body>
+    <div id="app">
+        <!-- Mobile Navigation -->
+        <nav class="mobile-nav">
+            <div class="nav-container">
+                <button class="menu-toggle" id="menu-toggle">
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                </button>
+                <h1 class="nav-title">Photo Editor Pro</h1>
+                <button class="upload-btn" id="mobile-upload">
+                    <i class="fas fa-plus"></i>
+                </button>
+            </div>
+        </nav>
+
+        <!-- Sidebar Menu -->
+        <div class="sidebar" id="sidebar">
+            <div class="sidebar-content">
+                <div class="user-info">
+                    {% if user.is_authenticated %}
+                        <div class="avatar">{{ user.username.0|upper }}</div>
+                        <div class="user-details">
+                            <div class="username">{{ user.username }}</div>
+                            <div class="plan">{{ user.userprofile.subscription_type|title }} Plan</div>
+                        </div>
+                    {% endif %}
+                </div>
+                
+                <ul class="menu-items">
+                    <li><a href="{% url 'editor:dashboard' %}"><i class="fas fa-home"></i> Dashboard</a></li>
+                    <li><a href="{% url 'editor:projects' %}"><i class="fas fa-folder"></i> Projects</a></li>
+                    <li><a href="{% url 'editor:batch_process' %}"><i class="fas fa-layer-group"></i> Batch Process</a></li>
+                    <li><a href="{% url 'accounts:profile' %}"><i class="fas fa-user"></i> Profile</a></li>
+                    <li><a href="{% url 'accounts:subscription' %}"><i class="fas fa-crown"></i> Upgrade</a></li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            {% block content %}{% endblock %}
+        </main>
+
+        <!-- Mobile Upload Modal -->
+        <div class="mobile-modal" id="upload-modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3>Upload Photos</h3>
+                    <button class="close-btn" id="close-upload">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <div class="upload-options">
+                        <button class="upload-option" id="camera-upload">
+                            <i class="fas fa-camera"></i>
+                            <span>Take Photo</span>
+                        </button>
+                        <button class="upload-option" id="gallery-upload">
+                            <i class="fas fa-images"></i>
+                            <span>Choose from Gallery</span>
+                        </button>
+                    </div>
+                    <input type="file" id="file-input" accept="image/*" capture="environment" style="display: none;">
+                    <input type="file" id="gallery-input" accept="image/*" multiple style="display: none;">
+                </div>
+            </div>
+        </div>
+
+        <!-- Touch Gestures Overlay -->
+        <div class="gesture-overlay" id="gesture-overlay"></div>
+    </div>
+
+    <!-- Service Worker Registration -->
+    <script>
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('/sw.js')
+                .then(registration => console.log('SW registered'))
+                .catch(error => console.log('SW registration failed'));
+        }
+    </script>
+    
+    <script src="{% static 'js/mobile.js' %}"></script>
+    {% block extra_js %}{% endblock %}
+</body>
+</html>

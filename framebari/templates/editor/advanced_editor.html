@@ -1,0 +1,340 @@
+<!-- templates/editor/advanced_editor.html -->
+<div id="advanced-photo-editor">
+    <div class="sidebar">
+        <div class="tool-section">
+            <h3>Basic Adjustments</h3>
+            <div class="slider-group">
+                <label>Brightness</label>
+                <input type="range" id="brightness" min="-100" max="100" value="0" class="real-time-slider">
+                <span class="value-display">0</span>
+            </div>
+            
+            <div class="slider-group">
+                <label>Contrast</label>
+                <input type="range" id="contrast" min="-100" max="100" value="0" class="real-time-slider">
+                <span class="value-display">0</span>
+            </div>
+            
+            <div class="slider-group">
+                <label>Saturation</label>
+                <input type="range" id="saturation" min="-100" max="100" value="0" class="real-time-slider">
+                <span class="value-display">0</span>
+            </div>
+        </div>
+        
+        <div class="tool-section">
+            <h3>Color Grading</h3>
+            <select id="color-grade" class="real-time-select">
+                <option value="">None</option>
+                <option value="cinematic_warm">Cinematic Warm</option>
+                <option value="cinematic_cool">Cinematic Cool</option>
+                <option value="vintage">Vintage Film</option>
+                <option value="dramatic">Dramatic</option>
+                <option value="mono_blue">Mono Blue</option>
+                <option value="neon">Neon</option>
+            </select>
+            
+            <div class="slider-group">
+                <label>Intensity</label>
+                <input type="range" id="grade-intensity" min="0" max="100" value="100" class="real-time-slider">
+                <span class="value-display">100%</span>
+            </div>
+        </div>
+        
+        <div class="tool-section">
+            <h3>Background</h3>
+            <button id="detect-subjects" class="action-btn">Detect Subjects</button>
+            <button id="remove-bg" class="action-btn">Remove Background</button>
+            
+            <select id="bg-style">
+                <option value="blue_default">Classic Blue</option>
+                <option value="blue_neon">Neon Blue</option>
+                <option value="blue_wave">Wave Blue</option>
+                <option value="blue_metallic">Metallic Blue</option>
+                <option value="blue_gradient">Gradient Blue</option>
+                <option value="abstract_geometric">Abstract Geometric</option>
+                <option value="studio_light">Studio Lighting</option>
+                <option value="bokeh">Bokeh Effect</option>
+            </select>
+        </div>
+        
+        <div class="tool-section">
+            <h3>Export</h3>
+            <select id="output-format">
+                <option value="JPEG">JPEG</option>
+                <option value="PNG">PNG</option>
+                <option value="WEBP">WebP</option>
+            </select>
+            
+            <div class="slider-group">
+                <label>Quality</label>
+                <input type="range" id="quality" min="1" max="100" value="85">
+                <span class="value-display">85%</span>
+            </div>
+            
+            <button id="export-photo" class="export-btn">Export Photo</button>
+        </div>
+    </div>
+    
+    <div class="main-canvas">
+        <div class="canvas-header">
+            <button id="zoom-fit">Fit</button>
+            <button id="zoom-100">100%</button>
+            <button id="toggle-before-after">Before/After</button>
+        </div>
+        
+        <div class="image-container">
+            <canvas id="main-canvas"></canvas>
+            <div id="subject-overlays"></div>
+            <div id="loading-overlay" class="hidden">
+                <div class="spinner"></div>
+                <p>Processing...</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+class AdvancedPhotoEditor {
+    constructor(photoId) {
+        this.photoId = photoId;
+        this.canvas = document.getElementById('main-canvas');
+        this.ctx = this.canvas.getContext('2d');
+        this.originalImage = null;
+        this.currentImage = null;
+        this.settings = {};
+        this.subjects = [];
+        
+        this.initializeEditor();
+        this.bindEvents();
+    }
+    
+    initializeEditor() {
+        // Load original image
+        const img = new Image();
+        img.onload = () => {
+            this.originalImage = img;
+            this.currentImage = img;
+            this.drawImage();
+        };
+        img.src = '{{ photo.original_image.url }}';
+    }
+    
+    bindEvents() {
+        // Real-time sliders
+        document.querySelectorAll('.real-time-slider').forEach(slider => {
+            slider.addEventListener('input', (e) => {
+                this.updateSetting(e.target.id, e.target.value);
+                this.updateValueDisplay(e.target);
+                this.debouncePreview();
+            });
+        });
+        
+        // Background style
+        document.getElementById('bg-style').addEventListener('change', (e) => {
+            this.updateSetting('backgroundStyle', e.target.value);
+            this.applyEffects();
+        });
+        
+        // Action buttons
+        document.getElementById('detect-subjects').addEventListener('click', () => {
+            this.detectSubjects();
+        });
+        
+        document.getElementById('remove-bg').addEventListener('click', () => {
+            this.removeBackground();
+        });
+        
+        document.getElementById('export-photo').addEventListener('click', () => {
+            this.exportPhoto();
+        });
+    }
+    
+    updateSetting(key, value) {
+        this.settings[key] = value;
+    }
+    
+    updateValueDisplay(slider) {
+        const display = slider.nextElementSibling;
+        let value = slider.value;
+        if (slider.id === 'grade-intensity' || slider.id === 'quality') {
+            value += '%';
+        }
+        display.textContent = value;
+    }
+    
+    debouncePreview() {
+        clearTimeout(this.previewTimeout);
+        this.previewTimeout = setTimeout(() => {
+            this.generatePreview();
+        }, 300);
+    }
+    
+    async generatePreview() {
+        this.showLoading(true);
+        
+        try {
+            const response = await fetch(`/editor/${this.photoId}/preview/`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': this.getCsrfToken()
+                },
+                body: JSON.stringify(this.settings)
+            });
+            
+            const data = await response.json();
+            if (data.success) {
+                this.loadPreviewImage(data.preview_url);
+            }
+        } catch (error) {
+            console.error('Preview generation failed:', error);
+        } finally {
+            this.showLoading(false);
+        }
+    }
+    
+    async detectSubjects() {
+        this.showLoading(true);
+        
+        try {
+            const response = await fetch(`/editor/${this.photoId}/detect-subjects/`);
+            const data = await response.json();
+            
+            if (data.subjects) {
+                this.subjects = data.subjects;
+                this.drawSubjectOverlays();
+            }
+        } catch (error) {
+            console.error('Subject detection failed:', error);
+        } finally {
+            this.showLoading(false);
+        }
+    }
+    
+    drawSubjectOverlays() {
+        const overlayContainer = document.getElementById('subject-overlays');
+        overlayContainer.innerHTML = '';
+        
+        this.subjects.forEach((subject, index) => {
+            const overlay = document.createElement('div');
+            overlay.className = 'subject-overlay';
+            overlay.style.cssText = `
+                position: absolute;
+                left: ${subject.bbox.x}px;
+                top: ${subject.bbox.y}px;
+                width: ${subject.bbox.width}px;
+                height: ${subject.bbox.height}px;
+                border: 2px solid #00ff00;
+                background: rgba(0, 255, 0, 0.1);
+                cursor: pointer;
+            `;
+            
+            overlay.addEventListener('click', () => {
+                this.selectSubject(index);
+            });
+            
+            overlayContainer.appendChild(overlay);
+        });
+    }
+    
+    selectSubject(index) {
+        // Enable subject-specific editing
+        this.selectedSubject = index;
+        // Show subject-specific controls
+        this.showSubjectControls();
+    }
+    
+    showSubjectControls() {
+        // Add subject-specific color grading controls
+        const subjectControls = document.createElement('div');
+        subjectControls.className = 'subject-controls';
+        subjectControls.innerHTML = `
+            <h4>Subject ${this.selectedSubject + 1} Controls</h4>
+            <select id="subject-color-grade">
+                <option value="">No Effect</option>
+                <option value="cinematic_warm">Cinematic Warm</option>
+                <option value="cinematic_cool">Cinematic Cool</option>
+                <option value="vintage">Vintage</option>
+            </select>
+        `;
+        
+        document.querySelector('.sidebar').appendChild(subjectControls);
+    }
+    
+    drawImage() {
+        if (!this.currentImage) return;
+        
+        const { width, height } = this.currentImage;
+        const containerWidth = this.canvas.parentElement.clientWidth;
+        const containerHeight = this.canvas.parentElement.clientHeight;
+        
+        // Calculate scale to fit
+        const scale = Math.min(
+            containerWidth / width,
+            containerHeight / height
+        );
+        
+        this.canvas.width = width * scale;
+        this.canvas.height = height * scale;
+        
+        this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+        this.ctx.drawImage(this.currentImage, 0, 0, this.canvas.width, this.canvas.height);
+    }
+    
+    loadPreviewImage(url) {
+        const img = new Image();
+        img.onload = () => {
+            this.currentImage = img;
+            this.drawImage();
+        };
+        img.src = url + '?t=' + new Date().getTime();
+    }
+    
+    showLoading(show) {
+        const overlay = document.getElementById('loading-overlay');
+        overlay.classList.toggle('hidden', !show);
+    }
+    
+    getCsrfToken() {
+        return document.querySelector('[name=csrfmiddlewaretoken]').value;
+    }
+    
+    async exportPhoto() {
+        this.showLoading(true);
+        
+        try {
+            const response = await fetch(`/editor/${this.photoId}/export/`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': this.getCsrfToken()
+                },
+                body: JSON.stringify({
+                    ...this.settings,
+                    format: document.getElementById('output-format').value,
+                    quality: document.getElementById('quality').value
+                })
+            });
+            
+            const data = await response.json();
+            if (data.success) {
+                // Trigger download
+                const link = document.createElement('a');
+                link.href = data.download_url;
+                link.download = data.filename;
+                link.click();
+            }
+        } catch (error) {
+            console.error('Export failed:', error);
+        } finally {
+            this.showLoading(false);
+        }
+    }
+}
+
+// Initialize editor when page loads
+document.addEventListener('DOMContentLoaded', () => {
+    const editor = new AdvancedPhotoEditor('{{ photo.id }}');
+});
+</script>

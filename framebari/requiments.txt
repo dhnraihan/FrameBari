@@ -1,0 +1,12 @@
+Django
+Pillow
+opencv-python
+numpy
+scikit-image
+rembg
+colour-science
+django-extensions
+celery
+redis
+django-storages
+boto3

@@ -1,0 +1,63 @@
+<!-- templates/editor/editor.html -->
+<div id="photo-editor">
+    <div class="toolbar">
+        <div class="tool-group">
+            <label>Brightness</label>
+            <input type="range" id="brightness" min="-100" max="100" value="{{ settings.brightness }}">
+        </div>
+        
+        <div class="tool-group">
+            <label>Contrast</label>
+            <input type="range" id="contrast" min="-100" max="100" value="{{ settings.contrast }}">
+        </div>
+        
+        <div class="tool-group">
+            <label>Background Color</label>
+            <input type="color" id="bg-color" value="{{ settings.background_color }}">
+        </div>
+        
+        <div class="tool-group">
+            <label>Background Style</label>
+            <select id="bg-style">
+                <option value="solid">Solid</option>
+                <option value="gradient">Gradient</option>
+                <option value="wave">Wave</option>
+            </select>
+        </div>
+        
+        <button id="apply-effects">Apply Effects</button>
+        <button id="detect-subjects">Detect Subjects</button>
+        <button id="remove-background">Remove Background</button>
+    </div>
+    
+    <div class="canvas-container">
+        <img id="main-image" src="{{ photo.original_image.url }}" alt="Photo">
+        <div id="subject-overlays"></div>
+    </div>
+</div>
+
+<script>
+document.getElementById('apply-effects').addEventListener('click', function() {
+    const settings = {
+        brightness: document.getElementById('brightness').value,
+        contrast: document.getElementById('contrast').value,
+        background_color: document.getElementById('bg-color').value,
+        background_style: document.getElementById('bg-style').value,
+        replace_background: true
+    };
+    
+    fetch(`/editor/{{ photo.id }}/apply/`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(settings)
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            document.getElementById('main-image').src = data.processed_url + '?t=' + new Date().getTime();
+        }
+    });
+});
+</script>

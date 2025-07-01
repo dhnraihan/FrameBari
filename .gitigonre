@@ -1,0 +1,112 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Django migrations
+*/migrations/
+!*/migrations/__init__.py
+
+# Django static files
+
+# Media files
+media/
+
+# Virtual environments
+venv/
+env/
+ENV/
+.venv/
+.pyenv/
+
+# VS Code settings
+.vscode/
+
+# PyCharm settings
+.idea/
+
+# Jupyter Notebook checkpoints
+.ipynb_checkpoints
+
+# System files
+.DS_Store
+Thumbs.db
+
+# Environment variables & secrets
+.env
+*.env
+
+
+# Database files (if using SQLite)
+*.sqlite3
+
+# Test reports & coverage
+htmlcov/
+.coverage
+.tox/
+.nox/
+.coverage.*
+.cache
+.pytest_cache/
+
+# Distribution / packaging
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# Logs
+*.log
+
+# Compiled C files
+*.so
+
+# pip log
+pip-log.txt
+
+# mypy
+.mypy_cache/
+.dmypy.json
+dmypy.json
+
+# pyre
+.pyre/
+
+# pytype
+.pytype/
+
+# Profiling data
+.prof
+
+# Node modules (if using frontend tools)
+node_modules/
+
+# Coverage reports
+coverage.xml
+*.cover
+*.py,cover
+
+# Gunicorn/PID files
+*.pid
+
+# Local postgres data (if applicable)
+.pgdata/
+
+# Others
+*.bak
+*.swp
+*.tmp
+*.orig
+*.rej
