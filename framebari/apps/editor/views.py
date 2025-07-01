@@ -6,6 +6,7 @@ from django.contrib.auth.decorators import login_required
 from django.core.files.storage import default_storage
 import json
 from .models import Project, Photo, EditingSettings
+from apps.accounts.models import UserProfile
 from apps.processing.engine import PhotoProcessor
 from .tasks import process_photo_async
 
@@ -217,7 +218,7 @@ def download_batch(request, job_id):
 def dashboard(request):
     """Main dashboard showing user's projects and recent photos"""
     user = request.user
-    profile = user.userprofile
+    profile, created = UserProfile.objects.get_or_create(user=user)
     
     # Get user's projects
     projects = Project.objects.filter(user=user).order_by('-updated_at')[:6]

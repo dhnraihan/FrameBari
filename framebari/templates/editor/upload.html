@@ -1,0 +1,123 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Upload Photo - FrameBari{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <div class="card">
+                <div class="card-header">
+                    <h4 class="card-title mb-0">
+                        <i class="fas fa-upload me-2"></i>Upload Photo
+                    </h4>
+                </div>
+                <div class="card-body">
+                    <form method="post" enctype="multipart/form-data" id="uploadForm">
+                        {% csrf_token %}
+                        <div class="upload-area border-dashed p-5 text-center mb-4" id="uploadArea">
+                            <i class="fas fa-cloud-upload-alt fa-3x text-muted mb-3"></i>
+                            <h5>Drag & Drop your photos here</h5>
+                            <p class="text-muted">or click to browse files</p>
+                            <input type="file" id="fileInput" name="photo" accept="image/*" multiple style="display: none;">
+                            <button type="button" class="btn btn-primary" onclick="document.getElementById('fileInput').click()">
+                                Choose Files
+                            </button>
+                        </div>
+                        
+                        <div id="fileList" class="mb-3" style="display: none;">
+                            <h6>Selected Files:</h6>
+                            <div id="selectedFiles"></div>
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-md-6">
+                                <button type="submit" class="btn btn-success w-100">
+                                    <i class="fas fa-upload me-2"></i>Upload & Start Editing
+                                </button>
+                            </div>
+                            <div class="col-md-6">
+                                <a href="{% url 'editor:dashboard' %}" class="btn btn-outline-secondary w-100">
+                                    <i class="fas fa-arrow-left me-2"></i>Back to Dashboard
+                                </a>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+.border-dashed {
+    border: 2px dashed #ddd !important;
+    border-radius: 10px;
+    transition: all 0.3s ease;
+}
+
+.upload-area:hover {
+    border-color: #007bff !important;
+    background-color: #f8f9fa;
+}
+
+.upload-area.dragover {
+    border-color: #007bff !important;
+    background-color: #e3f2fd;
+}
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// File upload functionality
+document.addEventListener('DOMContentLoaded', function() {
+    const uploadArea = document.getElementById('uploadArea');
+    const fileInput = document.getElementById('fileInput');
+    const fileList = document.getElementById('fileList');
+    const selectedFiles = document.getElementById('selectedFiles');
+    
+    // Drag and drop
+    uploadArea.addEventListener('dragover', function(e) {
+        e.preventDefault();
+        uploadArea.classList.add('dragover');
+    });
+    
+    uploadArea.addEventListener('dragleave', function(e) {
+        e.preventDefault();
+        uploadArea.classList.remove('dragover');
+    });
+    
+    uploadArea.addEventListener('drop', function(e) {
+        e.preventDefault();
+        uploadArea.classList.remove('dragover');
+        const files = e.dataTransfer.files;
+        handleFiles(files);
+    });
+    
+    fileInput.addEventListener('change', function() {
+        handleFiles(this.files);
+    });
+    
+    function handleFiles(files) {
+        if (files.length > 0) {
+            fileList.style.display = 'block';
+            selectedFiles.innerHTML = '';
+            
+            for (let file of files) {
+                const fileItem = document.createElement('div');
+                fileItem.className = 'file-item p-2 border rounded mb-2';
+                fileItem.innerHTML = `
+                    <i class="fas fa-image me-2"></i>
+                    ${file.name} (${(file.size / 1024 / 1024).toFixed(2)} MB)
+                `;
+                selectedFiles.appendChild(fileItem);
+            }
+        }
+    }
+});
+</script>
+{% endblock %}
