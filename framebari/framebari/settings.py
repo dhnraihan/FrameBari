@@ -222,7 +222,12 @@ MAX_IMAGE_SIZE = (4000, 4000)  # Max dimensions
 MAX_FILE_SIZE = 50 * 1024 * 1024  # 50MB
 ALLOWED_IMAGE_FORMATS = ['JPEG', 'PNG', 'WEBP', 'TIFF']
 
-# # Email Configuration
+# Email Configuration
+EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+# EMAIL_HOST = 'smtp.gmail.com'
+# EMAIL_PORT = 587
+# EMAIL_USE_TLS = True
+
 # EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
 # EMAIL_HOST = config('EMAIL_HOST', default='localhost')
 # EMAIL_PORT = config('EMAIL_PORT', default=587, cast=int)
@@ -230,6 +235,8 @@ ALLOWED_IMAGE_FORMATS = ['JPEG', 'PNG', 'WEBP', 'TIFF']
 # EMAIL_HOST_USER = config('EMAIL_HOST_USER', default='')
 # EMAIL_HOST_PASSWORD = config('EMAIL_HOST_PASSWORD', default='')
 # DEFAULT_FROM_EMAIL = config('DEFAULT_FROM_EMAIL', default='noreply@photoeditor.com')
+
+
 
 # # Logging
 # LOGGING = {
