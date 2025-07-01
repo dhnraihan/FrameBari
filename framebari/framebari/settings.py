@@ -64,12 +64,14 @@ THIRD_PARTY_APPS = [
 LOCAL_APPS = [
     'apps.accounts',
     'apps.editor',
-    'apps.processing',
-    'apps.storage',
+    'apps.pwa',
+    # 'apps.processing',
+    # 'apps.storage',
+    # 'apps.api'
 ]
 
 INSTALLED_APPS = DJANGO_APPS + THIRD_PARTY_APPS + LOCAL_APPS
-
+# INSTALLED_APPS = DJANGO_APPS + THIRD_PARTY_APPS
 
 
 MIDDLEWARE = [

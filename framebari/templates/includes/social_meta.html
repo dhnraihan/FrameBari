@@ -1,0 +1,156 @@
+{% load static %}
+
+<!-- Open Graph / Facebook -->
+<meta property="og:type" content="{% block og_type %}website{% endblock %}">
+<meta property="og:url" content="{{ request.build_absolute_uri }}">
+<meta property="og:title" content="{% block og_title %}{% block title %}FrameBari - Professional Photo Editor{% endblock %}{% endblock %}">
+<meta property="og:description" content="{% block og_description %}AI-powered photo editing in your browser. Professional tools, background removal, filters, and real-time collaboration. Edit photos like a pro.{% endblock %}">
+<meta property="og:image" content="{% block og_image %}{{ request.scheme }}://{{ request.get_host }}{% static 'images/og-image.jpg' %}{% endblock %}">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:site_name" content="FrameBari">
+<meta property="og:locale" content="en_US">
+
+<!-- Twitter -->
+<meta name="twitter:card" content="{% block twitter_card %}summary_large_image{% endblock %}">
+<meta name="twitter:url" content="{{ request.build_absolute_uri }}">
+<meta name="twitter:title" content="{% block twitter_title %}{% block title %}FrameBari - Professional Photo Editor{% endblock %}{% endblock %}">
+<meta name="twitter:description" content="{% block twitter_description %}AI-powered photo editing in your browser. Professional tools, background removal, filters, and real-time collaboration.{% endblock %}">
+<meta name="twitter:image" content="{% block twitter_image %}{{ request.scheme }}://{{ request.get_host }}{% static 'images/twitter-image.jpg' %}{% endblock %}">
+<meta name="twitter:site" content="@FrameBari">
+<meta name="twitter:creator" content="@FrameBari">
+
+<!-- Additional Meta Tags -->
+<meta name="description" content="{% block meta_description %}Professional photo editing software with AI-powered tools. Edit, enhance, and transform your photos with advanced filters, background removal, and batch processing.{% endblock %}">
+<meta name="keywords" content="{% block meta_keywords %}photo editor, image editing, background removal, AI photo enhancement, online photo editor, professional photo tools, batch processing, filters, photo effects{% endblock %}">
+<meta name="author" content="FrameBari Team">
+<meta name="robots" content="{% block meta_robots %}index, follow{% endblock %}">
+
+<!-- Canonical URL -->
+<link rel="canonical" href="{% block canonical_url %}{{ request.build_absolute_uri }}{% endblock %}">
+
+<!-- App-specific meta tags -->
+<meta name="application-name" content="FrameBari">
+<meta name="apple-mobile-web-app-title" content="FrameBari">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#007bff">
+<meta name="msapplication-TileColor" content="#007bff">
+
+<!-- iOS Icons -->
+<link rel="apple-touch-icon" sizes="57x57" href="{% static 'icons/apple-icon-57x57.png' %}">
+<link rel="apple-touch-icon" sizes="60x60" href="{% static 'icons/apple-icon-60x60.png' %}">
+<link rel="apple-touch-icon" sizes="72x72" href="{% static 'icons/apple-icon-72x72.png' %}">
+<link rel="apple-touch-icon" sizes="76x76" href="{% static 'icons/apple-icon-76x76.png' %}">
+<link rel="apple-touch-icon" sizes="114x114" href="{% static 'icons/apple-icon-114x114.png' %}">
+<link rel="apple-touch-icon" sizes="120x120" href="{% static 'icons/apple-icon-120x120.png' %}">
+<link rel="apple-touch-icon" sizes="144x144" href="{% static 'icons/apple-icon-144x144.png' %}">
+<link rel="apple-touch-icon" sizes="152x152" href="{% static 'icons/apple-icon-152x152.png' %}">
+<link rel="apple-touch-icon" sizes="180x180" href="{% static 'icons/apple-icon-180x180.png' %}">
+
+<!-- Android Icons -->
+<link rel="icon" type="image/png" sizes="192x192" href="{% static 'icons/android-icon-192x192.png' %}">
+<link rel="icon" type="image/png" sizes="32x32" href="{% static 'icons/favicon-32x32.png' %}">
+<link rel="icon" type="image/png" sizes="96x96" href="{% static 'icons/favicon-96x96.png' %}">
+<link rel="icon" type="image/png" sizes="16x16" href="{% static 'icons/favicon-16x16.png' %}">
+
+<!-- Manifest -->
+<link rel="manifest" href="{% url 'pwa_manifest' %}">
+
+<!-- Microsoft -->
+<meta name="msapplication-TileImage" content="{% static 'icons/ms-icon-144x144.png' %}">
+<meta name="msapplication-config" content="{% static 'browserconfig.xml' %}">
+
+<!-- Schema.org JSON-LD -->
+<script type="application/ld+json">
+{
+    "@context": "https://schema.org",
+    "@type": "{% block schema_type %}WebApplication{% endblock %}",
+    "name": "{% block schema_name %}FrameBari{% endblock %}",
+    "description": "{% block schema_description %}Professional photo editing application with AI-powered tools for background removal, filters, and batch processing.{% endblock %}",
+    "url": "{{ request.scheme }}://{{ request.get_host }}",
+    "logo": "{{ request.scheme }}://{{ request.get_host }}{% static 'icons/logo-512x512.png' %}",
+    "image": "{{ request.scheme }}://{{ request.get_host }}{% static 'images/og-image.jpg' %}",
+    "applicationCategory": "PhotographyApplication",
+    "operatingSystem": "Web Browser",
+    "offers": {
+        "@type": "Offer",
+        "price": "0",
+        "priceCurrency": "USD"
+    },
+    "creator": {
+        "@type": "Organization",
+        "name": "FrameBari Team",
+        "url": "{{ request.scheme }}://{{ request.get_host }}"
+    },
+    "datePublished": "{% now 'c' %}",
+    "inLanguage": "en-US"
+}
+</script>
+
+<!-- Additional structured data for features -->
+<script type="application/ld+json">
+{
+    "@context": "https://schema.org",
+    "@type": "ItemList",
+    "name": "FrameBari Features",
+    "itemListElement": [
+        {
+            "@type": "SoftwareApplication",
+            "position": 1,
+            "name": "AI Background Removal",
+            "description": "Automatically remove backgrounds from photos using AI"
+        },
+        {
+            "@type": "SoftwareApplication", 
+            "position": 2,
+            "name": "Professional Filters",
+            "description": "Apply professional-grade filters and effects"
+        },
+        {
+            "@type": "SoftwareApplication",
+            "position": 3,
+            "name": "Batch Processing",
+            "description": "Process multiple photos simultaneously"
+        },
+        {
+            "@type": "SoftwareApplication",
+            "position": 4,
+            "name": "Real-time Collaboration",
+            "description": "Collaborate on photo projects in real-time"
+        }
+    ]
+}
+</script>
+
+<!-- Preconnect to external domains -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="dns-prefetch" href="//cdnjs.cloudflare.com">
+<link rel="dns-prefetch" href="//cdn.jsdelivr.net">
+
+<!-- Preload critical resources -->
+<link rel="preload" href="{% static 'css/main.css' %}" as="style">
+<link rel="preload" href="{% static 'js/main.js' %}" as="script">
+
+<!-- Security headers -->
+<meta http-equiv="X-Content-Type-Options" content="nosniff">
+<meta http-equiv="X-Frame-Options" content="DENY">
+<meta http-equiv="X-XSS-Protection" content="1; mode=block">
+<meta http-equiv="Referrer-Policy" content="strict-origin-when-cross-origin">
+
+<!-- Language alternates -->
+{% block hreflang %}
+<link rel="alternate" hreflang="en" href="{{ request.build_absolute_uri }}">
+<link rel="alternate" hreflang="x-default" href="{{ request.build_absolute_uri }}">
+{% endblock %}
+
+<!-- Comments for usage:
+Usage in templates:
+
+{% block og_title %}Custom Open Graph Title{% endblock %}
+{% block og_description %}Custom description for social sharing{% endblock %}
+{% block meta_keywords %}custom, keywords, for, this, page{% endblock %}
+{% block schema_type %}Article{% endblock %}
+-->

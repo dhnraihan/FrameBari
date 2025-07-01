@@ -1,0 +1,189 @@
+{% load static %}
+
+{% if is_paginated %}
+<nav aria-label="Page navigation" class="d-flex justify-content-center mt-4">
+    <ul class="pagination pagination-rounded">
+        <!-- First page -->
+        {% if page_obj.has_previous %}
+            <li class="page-item">
+                <a class="page-link" href="?page=1{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}{% if request.GET.filter %}&filter={{ request.GET.filter }}{% endif %}" aria-label="First">
+                    <i class="fas fa-angle-double-left"></i>
+                </a>
+            </li>
+        {% endif %}
+
+        <!-- Previous page -->
+        {% if page_obj.has_previous %}
+            <li class="page-item">
+                <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}{% if request.GET.filter %}&filter={{ request.GET.filter }}{% endif %}" aria-label="Previous">
+                    <i class="fas fa-angle-left"></i>
+                </a>
+            </li>
+        {% else %}
+            <li class="page-item disabled">
+                <span class="page-link">
+                    <i class="fas fa-angle-left"></i>
+                </span>
+            </li>
+        {% endif %}
+
+        <!-- Page numbers -->
+        {% for num in page_obj.paginator.page_range %}
+            {% if page_obj.number == num %}
+                <li class="page-item active">
+                    <span class="page-link">{{ num }}</span>
+                </li>
+            {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ num }}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}{% if request.GET.filter %}&filter={{ request.GET.filter }}{% endif %}">{{ num }}</a>
+                </li>
+            {% elif num == 1 %}
+                <li class="page-item">
+                    <a class="page-link" href="?page=1{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}{% if request.GET.filter %}&filter={{ request.GET.filter }}{% endif %}">1</a>
+                </li>
+                {% if page_obj.number > 4 %}
+                    <li class="page-item disabled">
+                        <span class="page-link">...</span>
+                    </li>
+                {% endif %}
+            {% elif num == page_obj.paginator.num_pages %}
+                {% if page_obj.number < page_obj.paginator.num_pages|add:'-3' %}
+                    <li class="page-item disabled">
+                        <span class="page-link">...</span>
+                    </li>
+                {% endif %}
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}{% if request.GET.filter %}&filter={{ request.GET.filter }}{% endif %}">{{ page_obj.paginator.num_pages }}</a>
+                </li>
+            {% endif %}
+        {% endfor %}
+
+        <!-- Next page -->
+        {% if page_obj.has_next %}
+            <li class="page-item">
+                <a class="page-link" href="?page={{ page_obj.next_page_number }}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}{% if request.GET.filter %}&filter={{ request.GET.filter }}{% endif %}" aria-label="Next">
+                    <i class="fas fa-angle-right"></i>
+                </a>
+            </li>
+        {% else %}
+            <li class="page-item disabled">
+                <span class="page-link">
+                    <i class="fas fa-angle-right"></i>
+                </span>
+            </li>
+        {% endif %}
+
+        <!-- Last page -->
+        {% if page_obj.has_next %}
+            <li class="page-item">
+                <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}{% if request.GET.filter %}&filter={{ request.GET.filter }}{% endif %}" aria-label="Last">
+                    <i class="fas fa-angle-double-right"></i>
+                </a>
+            </li>
+        {% endif %}
+    </ul>
+</nav>
+
+<!-- Pagination info -->
+<div class="pagination-info text-center text-muted mt-2">
+    <small>
+        Showing {{ page_obj.start_index }} to {{ page_obj.end_index }} of {{ page_obj.paginator.count }} entries
+        {% if request.GET.search %}
+            (filtered from total entries)
+        {% endif %}
+    </small>
+</div>
+
+<!-- Items per page selector -->
+<div class="items-per-page d-flex justify-content-center align-items-center mt-3">
+    <label for="itemsPerPage" class="form-label me-2 mb-0">
+        <small>Items per page:</small>
+    </label>
+    <select class="form-select form-select-sm" id="itemsPerPage" style="width: auto;" onchange="changeItemsPerPage(this.value)">
+        <option value="10" {% if request.GET.per_page == '10' %}selected{% endif %}>10</option>
+        <option value="25" {% if request.GET.per_page == '25' %}selected{% endif %}>25</option>
+        <option value="50" {% if request.GET.per_page == '50' %}selected{% endif %}>50</option>
+        <option value="100" {% if request.GET.per_page == '100' %}selected{% endif %}>100</option>
+    </select>
+</div>
+
+{% endif %}
+
+<style>
+.pagination-rounded .page-link {
+    border-radius: 50px;
+    margin: 0 2px;
+    border: none;
+    color: #6c757d;
+    transition: all 0.3s ease;
+}
+
+.pagination-rounded .page-item.active .page-link {
+    background-color: #007bff;
+    border-color: #007bff;
+    color: white;
+    box-shadow: 0 2px 4px rgba(0, 123, 255, 0.3);
+}
+
+.pagination-rounded .page-link:hover {
+    color: #007bff;
+    background-color: #f8f9fa;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.pagination-rounded .page-item.disabled .page-link {
+    color: #c6c8ca;
+    background-color: transparent;
+}
+
+.items-per-page {
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+@media (max-width: 576px) {
+    .pagination {
+        flex-wrap: wrap;
+        justify-content: center;
+    }
+    
+    .pagination-rounded .page-link {
+        padding: 0.375rem 0.6rem;
+        font-size: 0.875rem;
+        margin: 1px;
+    }
+    
+    .pagination-info {
+        font-size: 0.75rem;
+    }
+}
+</style>
+
+<script>
+function changeItemsPerPage(value) {
+    const url = new URL(window.location);
+    url.searchParams.set('per_page', value);
+    url.searchParams.set('page', '1'); // Reset to first page
+    window.location.href = url.toString();
+}
+
+// Keyboard navigation
+document.addEventListener('keydown', function(e) {
+    if (e.ctrlKey || e.metaKey) {
+        {% if page_obj.has_previous %}
+        if (e.key === 'ArrowLeft') {
+            e.preventDefault();
+            window.location.href = '?page={{ page_obj.previous_page_number }}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}{% if request.GET.filter %}&filter={{ request.GET.filter }}{% endif %}';
+        }
+        {% endif %}
+        
+        {% if page_obj.has_next %}
+        if (e.key === 'ArrowRight') {
+            e.preventDefault();
+            window.location.href = '?page={{ page_obj.next_page_number }}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}{% if request.GET.filter %}&filter={{ request.GET.filter }}{% endif %}';
+        }
+        {% endif %}
+    }
+});
+</script>

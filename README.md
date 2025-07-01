@@ -1,8 +1,8 @@
-# Photo Editor Pro 🎨
+# FrameBari 🎨
 
 A powerful, next-generation photo editing web application built with Django, featuring AI-powered tools, professional-grade enhancements, and real-time collaboration capabilities.
 
-![Photo Editor Pro](https://img.shields.io/badge/version-1.0.0-blue.svg)
+![FrameBari](https://img.shields.io/badge/version-1.0.0-blue.svg)
 ![Django](https://img.shields.io/badge/django-4.2.7-green.svg)
 ![Python](https://img.shields.io/badge/python-3.11+-blue.svg)
 ![License](https://img.shields.io/badge/license-MIT-green.svg)

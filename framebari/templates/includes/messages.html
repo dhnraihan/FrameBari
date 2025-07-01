@@ -1,0 +1,157 @@
+{% if messages %}
+    <div class="messages-container">
+        {% for message in messages %}
+            <div class="alert alert-{% if message.tags == 'error' %}danger{% elif message.tags == 'warning' %}warning{% elif message.tags == 'success' %}success{% elif message.tags == 'info' %}info{% else %}primary{% endif %} alert-dismissible fade show" role="alert">
+                <div class="d-flex align-items-center">
+                    {% if message.tags == 'error' %}
+                        <i class="fas fa-exclamation-circle me-2"></i>
+                    {% elif message.tags == 'warning' %}
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                    {% elif message.tags == 'success' %}
+                        <i class="fas fa-check-circle me-2"></i>
+                    {% elif message.tags == 'info' %}
+                        <i class="fas fa-info-circle me-2"></i>
+                    {% else %}
+                        <i class="fas fa-bell me-2"></i>
+                    {% endif %}
+                    <div class="flex-grow-1">
+                        <strong>
+                            {% if message.tags == 'error' %}
+                                Error!
+                            {% elif message.tags == 'warning' %}
+                                Warning!
+                            {% elif message.tags == 'success' %}
+                                Success!
+                            {% elif message.tags == 'info' %}
+                                Info:
+                            {% else %}
+                                Notice:
+                            {% endif %}
+                        </strong>
+                        {{ message|safe }}
+                        
+                        {% if message.extra_tags %}
+                            <br><small class="text-muted">{{ message.extra_tags }}</small>
+                        {% endif %}
+                    </div>
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+        {% endfor %}
+    </div>
+{% endif %}
+
+<!-- Toast notifications for AJAX messages -->
+<div class="toast-container position-fixed top-0 end-0 p-3" style="z-index: 1055;">
+    <div id="liveToast" class="toast" role="alert" aria-live="assertive" aria-atomic="true">
+        <div class="toast-header">
+            <i class="fas fa-bell text-primary me-2"></i>
+            <strong class="me-auto">FrameBari</strong>
+            <small class="text-muted" id="toast-time">now</small>
+            <button type="button" class="btn-close" data-bs-dismiss="toast" aria-label="Close"></button>
+        </div>
+        <div class="toast-body" id="toast-body">
+            <!-- Dynamic content -->
+        </div>
+    </div>
+</div>
+
+<style>
+.messages-container {
+    position: fixed;
+    top: 90px; /* Below fixed navbar */
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 1050;
+    width: 90%;
+    max-width: 600px;
+}
+
+.alert {
+    animation: slideDown 0.3s ease-out;
+    margin-bottom: 10px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+@keyframes slideDown {
+    from {
+        opacity: 0;
+        transform: translateY(-20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Auto-hide messages after 5 seconds */
+.alert:not(.alert-danger) {
+    animation: slideDown 0.3s ease-out, fadeOut 0.5s ease-in 4.5s forwards;
+}
+
+@keyframes fadeOut {
+    from {
+        opacity: 1;
+    }
+    to {
+        opacity: 0;
+        transform: translateY(-20px);
+    }
+}
+
+@media (max-width: 768px) {
+    .messages-container {
+        width: 95%;
+        top: 80px;
+    }
+}
+</style>
+
+<script>
+// Auto-dismiss messages
+document.addEventListener('DOMContentLoaded', function() {
+    // Auto-hide success and info messages after 5 seconds
+    const autoHideAlerts = document.querySelectorAll('.alert:not(.alert-danger)');
+    autoHideAlerts.forEach(function(alert) {
+        setTimeout(function() {
+            const bootstrapAlert = new bootstrap.Alert(alert);
+            if (bootstrapAlert) {
+                bootstrapAlert.close();
+            }
+        }, 5000);
+    });
+});
+
+// Function to show toast notification
+function showToast(message, type = 'info', title = 'FrameBari') {
+    const toastElement = document.getElementById('liveToast');
+    const toastBody = document.getElementById('toast-body');
+    const toastTime = document.getElementById('toast-time');
+    const toastHeader = toastElement.querySelector('.toast-header');
+    
+    // Set content
+    toastBody.innerHTML = message;
+    toastTime.textContent = 'now';
+    
+    // Update icon based on type
+    const icon = toastHeader.querySelector('i');
+    icon.className = `fas me-2 ${getToastIcon(type)}`;
+    
+    // Show toast
+    const toast = new bootstrap.Toast(toastElement);
+    toast.show();
+}
+
+function getToastIcon(type) {
+    switch(type) {
+        case 'success': return 'fa-check-circle text-success';
+        case 'error': return 'fa-exclamation-circle text-danger';
+        case 'warning': return 'fa-exclamation-triangle text-warning';
+        case 'info': return 'fa-info-circle text-info';
+        default: return 'fa-bell text-primary';
+    }
+}
+
+// Global function for showing messages
+window.showMessage = showToast;
+</script>

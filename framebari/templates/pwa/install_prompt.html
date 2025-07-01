@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Install FrameBari</title>
+    <style>
+        .install-prompt {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 1rem 1.5rem;
+            border-radius: 15px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+            z-index: 1000;
+            max-width: 90vw;
+            width: 400px;
+            display: none;
+            animation: slideUp 0.5s ease;
+        }
+        
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translate(-50%, 100%);
+            }
+            to {
+                opacity: 1;
+                transform: translate(-50%, 0);
+            }
+        }
+        
+        .install-prompt.show {
+            display: block;
+        }
+        
+        .install-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 0.5rem;
+        }
+        
+        .install-icon {
+            font-size: 1.5rem;
+            margin-right: 0.5rem;
+        }
+        
+        .install-title {
+            font-size: 1.1rem;
+            font-weight: 600;
+            margin: 0;
+        }
+        
+        .install-text {
+            font-size: 0.9rem;
+            opacity: 0.9;
+            margin-bottom: 1rem;
+        }
+        
+        .install-buttons {
+            display: flex;
+            gap: 0.5rem;
+        }
+        
+        .install-btn {
+            flex: 1;
+            padding: 8px 16px;
+            border: none;
+            border-radius: 8px;
+            font-size: 0.9rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .install-btn.primary {
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+        }
+        
+        .install-btn.primary:hover {
+            background: rgba(255, 255, 255, 0.3);
+        }
+        
+        .install-btn.secondary {
+            background: transparent;
+            color: rgba(255, 255, 255, 0.8);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+        }
+        
+        .install-btn.secondary:hover {
+            background: rgba(255, 255, 255, 0.1);
+        }
+        
+        .close-btn {
+            position: absolute;
+            top: 8px;
+            right: 12px;
+            background: none;
+            border: none;
+            color: rgba(255, 255, 255, 0.8);
+            font-size: 1.2rem;
+            cursor: pointer;
+            width: 20px;
+            height: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+    </style>
+</head>
+<body>
+    <div id="installPrompt" class="install-prompt">
+        <button class="close-btn" onclick="hideInstallPrompt()">&times;</button>
+        <div class="install-header">
+            <span class="install-icon">📸</span>
+            <h3 class="install-title">Install FrameBari</h3>
+        </div>
+        <p class="install-text">
+            Add FrameBari to your home screen for quick access and a native app experience!
+        </p>
+        <div class="install-buttons">
+            <button class="install-btn primary" onclick="installApp()">Install</button>
+            <button class="install-btn secondary" onclick="hideInstallPrompt()">Later</button>
+        </div>
+    </div>
+
+    <script>
+        let deferredPrompt;
+        let installPromptElement = document.getElementById('installPrompt');
+
+        // Listen for beforeinstallprompt event
+        window.addEventListener('beforeinstallprompt', (e) => {
+            // Prevent Chrome 67 and earlier from automatically showing the prompt
+            e.preventDefault();
+            // Stash the event so it can be triggered later
+            deferredPrompt = e;
+            // Show install prompt after a delay
+            setTimeout(showInstallPrompt, 3000);
+        });
+
+        function showInstallPrompt() {
+            // Don't show if already dismissed
+            if (localStorage.getItem('installPromptDismissed') === 'true') {
+                return;
+            }
+            
+            // Don't show if already installed
+            if (window.matchMedia('(display-mode: standalone)').matches) {
+                return;
+            }
+            
+            installPromptElement.classList.add('show');
+        }
+
+        function hideInstallPrompt() {
+            installPromptElement.classList.remove('show');
+            localStorage.setItem('installPromptDismissed', 'true');
+        }
+
+        async function installApp() {
+            if (deferredPrompt) {
+                // Show the install prompt
+                deferredPrompt.prompt();
+                
+                // Wait for the user to respond
+                const { outcome } = await deferredPrompt.userChoice;
+                
+                if (outcome === 'accepted') {
+                    console.log('User accepted the install prompt');
+                } else {
+                    console.log('User dismissed the install prompt');
+                }
+                
+                // Clear the deferredPrompt
+                deferredPrompt = null;
+                hideInstallPrompt();
+            }
+        }
+
+        // Listen for app installed event
+        window.addEventListener('appinstalled', (evt) => {
+            console.log('FrameBari has been installed');
+            hideInstallPrompt();
+        });
+    </script>
+</body>
+</html>

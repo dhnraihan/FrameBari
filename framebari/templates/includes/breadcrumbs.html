@@ -1,0 +1,149 @@
+{% load static %}
+
+{% if breadcrumbs %}
+<nav aria-label="breadcrumb" class="bg-light py-2 mb-4">
+    <div class="container">
+        <ol class="breadcrumb mb-0">
+            <li class="breadcrumb-item">
+                <a href="{% url 'accounts:home' %}" class="text-decoration-none">
+                    <i class="fas fa-home"></i>
+                    <span class="d-none d-sm-inline ms-1">Home</span>
+                </a>
+            </li>
+            
+            {% for breadcrumb in breadcrumbs %}
+                {% if forloop.last %}
+                    <li class="breadcrumb-item active" aria-current="page">
+                        {% if breadcrumb.icon %}
+                            <i class="{{ breadcrumb.icon }}"></i>
+                        {% endif %}
+                        {{ breadcrumb.title }}
+                    </li>
+                {% else %}
+                    <li class="breadcrumb-item">
+                        {% if breadcrumb.url %}
+                            <a href="{{ breadcrumb.url }}" class="text-decoration-none">
+                                {% if breadcrumb.icon %}
+                                    <i class="{{ breadcrumb.icon }}"></i>
+                                {% endif %}
+                                {{ breadcrumb.title }}
+                            </a>
+                        {% else %}
+                            {% if breadcrumb.icon %}
+                                <i class="{{ breadcrumb.icon }}"></i>
+                            {% endif %}
+                            {{ breadcrumb.title }}
+                        {% endif %}
+                    </li>
+                {% endif %}
+            {% endfor %}
+        </ol>
+    </div>
+</nav>
+{% endif %}
+
+<!-- JSON-LD Structured Data for Search Engines -->
+{% if breadcrumbs %}
+<script type="application/ld+json">
+{
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    "itemListElement": [
+        {
+            "@type": "ListItem",
+            "position": 1,
+            "name": "Home",
+            "item": "{{ request.scheme }}://{{ request.get_host }}{% url 'accounts:home' %}"
+        }
+        {% for breadcrumb in breadcrumbs %}
+        ,{
+            "@type": "ListItem",
+            "position": {{ forloop.counter|add:1 }},
+            "name": "{{ breadcrumb.title }}",
+            {% if breadcrumb.url and not forloop.last %}
+            "item": "{{ request.scheme }}://{{ request.get_host }}{{ breadcrumb.url }}"
+            {% else %}
+            "item": "{{ request.scheme }}://{{ request.get_host }}{{ request.path }}"
+            {% endif %}
+        }
+        {% endfor %}
+    ]
+}
+</script>
+{% endif %}
+
+<style>
+.breadcrumb {
+    background-color: transparent;
+    padding: 0;
+}
+
+.breadcrumb-item + .breadcrumb-item::before {
+    content: ">";
+    color: #6c757d;
+    font-weight: bold;
+}
+
+.breadcrumb-item a {
+    color: #007bff;
+    transition: color 0.3s ease;
+}
+
+.breadcrumb-item a:hover {
+    color: #0056b3;
+}
+
+.breadcrumb-item.active {
+    color: #6c757d;
+    font-weight: 500;
+}
+
+.breadcrumb-item i {
+    font-size: 0.875rem;
+}
+
+@media (max-width: 576px) {
+    .breadcrumb-item {
+        font-size: 0.875rem;
+    }
+    
+    .breadcrumb-item i {
+        font-size: 0.75rem;
+    }
+}
+
+/* Hover effect for breadcrumb items */
+.breadcrumb-item:not(.active):hover {
+    transform: translateY(-1px);
+    transition: transform 0.2s ease;
+}
+
+/* Add animation for breadcrumb appearance */
+.breadcrumb {
+    animation: fadeInUp 0.5s ease-out;
+}
+
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+</style>
+
+<!-- Template usage example:
+{% with breadcrumbs=page_breadcrumbs %}
+    {% include 'includes/breadcrumbs.html' %}
+{% endwith %}
+
+Context example in view:
+context['page_breadcrumbs'] = [
+    {'title': 'Dashboard', 'url': reverse('editor:dashboard'), 'icon': 'fas fa-tachometer-alt'},
+    {'title': 'Projects', 'url': reverse('editor:projects'), 'icon': 'fas fa-folder'},
+    {'title': 'My Project', 'icon': 'fas fa-image'},
+]
+-->
