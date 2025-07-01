@@ -1,0 +1,468 @@
+<div class="toolbar-content p-3">
+    <!-- Tool Categories -->
+    <div class="tool-categories mb-4">
+        <div class="btn-group-vertical w-100" role="group">
+            <button class="btn btn-outline-primary active" data-category="enhance" onclick="switchCategory('enhance')">
+                <i class="fas fa-magic me-2"></i>Enhance
+            </button>
+            <button class="btn btn-outline-primary" data-category="filters" onclick="switchCategory('filters')">
+                <i class="fas fa-palette me-2"></i>Filters
+            </button>
+            <button class="btn btn-outline-primary" data-category="background" onclick="switchCategory('background')">
+                <i class="fas fa-cut me-2"></i>Background
+            </button>
+            <button class="btn btn-outline-primary" data-category="effects" onclick="switchCategory('effects')">
+                <i class="fas fa-star me-2"></i>Effects
+            </button>
+        </div>
+    </div>
+
+    <!-- Enhancement Tools -->
+    <div id="enhanceCategory" class="tool-category">
+        <h6 class="mb-3">Enhancement</h6>
+        
+        <!-- Quick Actions -->
+        <div class="quick-actions mb-4">
+            <button class="btn btn-sm btn-success w-100 mb-2" onclick="autoEnhance()">
+                <i class="fas fa-magic me-2"></i>Auto Enhance
+            </button>
+            <button class="btn btn-sm btn-outline-secondary w-100" onclick="resetAll()">
+                <i class="fas fa-undo me-2"></i>Reset All
+            </button>
+        </div>
+
+        <!-- Enhancement Controls -->
+        <div class="enhancement-controls">
+            <!-- Brightness -->
+            <div class="control-group mb-3">
+                <label class="form-label d-flex justify-content-between">
+                    <span>Brightness</span>
+                    <span class="value-display" id="brightnessValue">0</span>
+                </label>
+                <input type="range" class="form-range" id="brightnessSlider" 
+                       min="-100" max="100" value="0" 
+                       oninput="updateEnhancement('brightness', this.value)">
+            </div>
+
+            <!-- Contrast -->
+            <div class="control-group mb-3">
+                <label class="form-label d-flex justify-content-between">
+                    <span>Contrast</span>
+                    <span class="value-display" id="contrastValue">0</span>
+                </label>
+                <input type="range" class="form-range" id="contrastSlider" 
+                       min="-100" max="100" value="0" 
+                       oninput="updateEnhancement('contrast', this.value)">
+            </div>
+
+            <!-- Saturation -->
+            <div class="control-group mb-3">
+                <label class="form-label d-flex justify-content-between">
+                    <span>Saturation</span>
+                    <span class="value-display" id="saturationValue">0</span>
+                </label>
+                <input type="range" class="form-range" id="saturationSlider" 
+                       min="-100" max="100" value="0" 
+                       oninput="updateEnhancement('saturation', this.value)">
+            </div>
+
+            <!-- Vibrance -->
+            <div class="control-group mb-3">
+                <label class="form-label d-flex justify-content-between">
+                    <span>Vibrance</span>
+                    <span class="value-display" id="vibranceValue">0</span>
+                </label>
+                <input type="range" class="form-range" id="vibranceSlider" 
+                       min="-100" max="100" value="0" 
+                       oninput="updateEnhancement('vibrance', this.value)">
+            </div>
+
+            <!-- Exposure -->
+            <div class="control-group mb-3">
+                <label class="form-label d-flex justify-content-between">
+                    <span>Exposure</span>
+                    <span class="value-display" id="exposureValue">0</span>
+                </label>
+                <input type="range" class="form-range" id="exposureSlider" 
+                       min="-100" max="100" value="0" 
+                       oninput="updateEnhancement('exposure', this.value)">
+            </div>
+        </div>
+    </div>
+
+    <!-- Filters Category -->
+    <div id="filtersCategory" class="tool-category" style="display: none;">
+        <h6 class="mb-3">Filters</h6>
+        
+        <div class="filters-grid">
+            <div class="filter-option" onclick="applyFilter('none')">
+                <div class="filter-preview bg-light"></div>
+                <small>Original</small>
+            </div>
+            <div class="filter-option" onclick="applyFilter('vintage')">
+                <div class="filter-preview bg-warning"></div>
+                <small>Vintage</small>
+            </div>
+            <div class="filter-option" onclick="applyFilter('bw')">
+                <div class="filter-preview bg-secondary"></div>
+                <small>B&W</small>
+            </div>
+            <div class="filter-option" onclick="applyFilter('sepia')">
+                <div class="filter-preview bg-dark"></div>
+                <small>Sepia</small>
+            </div>
+            <div class="filter-option" onclick="applyFilter('cinematic')">
+                <div class="filter-preview bg-primary"></div>
+                <small>Cinematic</small>
+            </div>
+            <div class="filter-option" onclick="applyFilter('warm')">
+                <div class="filter-preview bg-danger"></div>
+                <small>Warm</small>
+            </div>
+        </div>
+    </div>
+
+    <!-- Background Category -->
+    <div id="backgroundCategory" class="tool-category" style="display: none;">
+        <h6 class="mb-3">Background</h6>
+        
+        <div class="mb-3">
+            <button class="btn btn-primary w-100 mb-2" onclick="detectSubjects()">
+                <i class="fas fa-search me-2"></i>Detect Subjects
+            </button>
+            <button class="btn btn-outline-danger w-100 mb-3" onclick="removeBackground()">
+                <i class="fas fa-cut me-2"></i>Remove Background
+            </button>
+        </div>
+
+        <div class="background-options">
+            <h6 class="mb-2">Background Styles</h6>
+            <div class="bg-options-grid">
+                <div class="bg-option" onclick="setBackground('transparent')">
+                    <div class="bg-preview transparent"></div>
+                    <small>Transparent</small>
+                </div>
+                <div class="bg-option" onclick="setBackground('white')">
+                    <div class="bg-preview bg-white"></div>
+                    <small>White</small>
+                </div>
+                <div class="bg-option" onclick="setBackground('black')">
+                    <div class="bg-preview bg-dark"></div>
+                    <small>Black</small>
+                </div>
+                <div class="bg-option" onclick="setBackground('blue')">
+                    <div class="bg-preview bg-primary"></div>
+                    <small>Blue</small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Effects Category -->
+    <div id="effectsCategory" class="tool-category" style="display: none;">
+        <h6 class="mb-3">Effects</h6>
+        
+        <div class="effects-list">
+            <button class="btn btn-outline-primary w-100 mb-2" onclick="applyEffect('blur')">
+                <i class="fas fa-eye me-2"></i>Blur
+            </button>
+            <button class="btn btn-outline-primary w-100 mb-2" onclick="applyEffect('sharpen')">
+                <i class="fas fa-search-plus me-2"></i>Sharpen
+            </button>
+            <button class="btn btn-outline-primary w-100 mb-2" onclick="applyEffect('noise')">
+                <i class="fas fa-film me-2"></i>Add Noise
+            </button>
+            <button class="btn btn-outline-primary w-100 mb-2" onclick="applyEffect('vignette')">
+                <i class="fas fa-circle me-2"></i>Vignette
+            </button>
+        </div>
+    </div>
+
+    <!-- Apply/Reset Actions -->
+    <div class="action-buttons mt-4 pt-3 border-top">
+        <button class="btn btn-success w-100 mb-2" onclick="applyChanges()" id="applyBtn">
+            <i class="fas fa-check me-2"></i>Apply Changes
+        </button>
+        <button class="btn btn-outline-secondary w-100" onclick="resetToOriginal()">
+            <i class="fas fa-undo me-2"></i>Reset to Original
+        </button>
+    </div>
+</div>
+
+<style>
+.tool-categories .btn {
+    text-align: left;
+    border-radius: 8px;
+    margin-bottom: 5px;
+}
+
+.tool-categories .btn.active {
+    background-color: var(--bs-primary);
+    color: white;
+    border-color: var(--bs-primary);
+}
+
+.control-group {
+    background: #f8f9fa;
+    padding: 12px;
+    border-radius: 8px;
+}
+
+.value-display {
+    font-weight: bold;
+    color: var(--bs-primary);
+}
+
+.filters-grid, .bg-options-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+    margin-bottom: 15px;
+}
+
+.filter-option, .bg-option {
+    text-align: center;
+    cursor: pointer;
+    padding: 8px;
+    border-radius: 8px;
+    transition: all 0.2s ease;
+    border: 2px solid transparent;
+}
+
+.filter-option:hover, .bg-option:hover {
+    background-color: #e9ecef;
+    border-color: var(--bs-primary);
+}
+
+.filter-option.active, .bg-option.active {
+    border-color: var(--bs-primary);
+    background-color: #e3f2fd;
+}
+
+.filter-preview, .bg-preview {
+    width: 100%;
+    height: 40px;
+    border-radius: 4px;
+    margin-bottom: 4px;
+    border: 1px solid #dee2e6;
+}
+
+.bg-preview.transparent {
+    background: linear-gradient(45deg, #ccc 25%, transparent 25%), 
+                linear-gradient(-45deg, #ccc 25%, transparent 25%), 
+                linear-gradient(45deg, transparent 75%, #ccc 75%), 
+                linear-gradient(-45deg, transparent 75%, #ccc 75%);
+    background-size: 10px 10px;
+    background-position: 0 0, 0 5px, 5px -5px, -5px 0px;
+}
+
+.effects-list .btn {
+    text-align: left;
+}
+
+.tool-category {
+    animation: fadeIn 0.3s ease;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.quick-actions {
+    border-bottom: 1px solid #dee2e6;
+    padding-bottom: 15px;
+}
+
+.action-buttons {
+    position: sticky;
+    bottom: 0;
+    background: white;
+    z-index: 10;
+}
+
+@media (max-width: 768px) {
+    .filters-grid, .bg-options-grid {
+        grid-template-columns: repeat(3, 1fr);
+    }
+    
+    .toolbar-content {
+        padding: 15px;
+    }
+}
+</style>
+
+<script>
+let currentCategory = 'enhance';
+let currentSettings = {
+    brightness: 0,
+    contrast: 0,
+    saturation: 0,
+    vibrance: 0,
+    exposure: 0
+};
+
+function switchCategory(category) {
+    // Update active button
+    document.querySelectorAll('[data-category]').forEach(btn => {
+        btn.classList.remove('active');
+    });
+    document.querySelector(`[data-category="${category}"]`).classList.add('active');
+    
+    // Hide all categories
+    document.querySelectorAll('.tool-category').forEach(cat => {
+        cat.style.display = 'none';
+    });
+    
+    // Show selected category
+    document.getElementById(category + 'Category').style.display = 'block';
+    currentCategory = category;
+}
+
+function updateEnhancement(setting, value) {
+    currentSettings[setting] = parseInt(value);
+    document.getElementById(setting + 'Value').textContent = value;
+    
+    // Generate preview with debounce
+    clearTimeout(window.previewTimeout);
+    window.previewTimeout = setTimeout(() => {
+        generatePreview();
+    }, 300);
+}
+
+function generatePreview() {
+    if (typeof window.generatePreview !== 'function') {
+        // Call the main editor's preview function
+        if (window.parent && window.parent.generatePreview) {
+            window.parent.generatePreview();
+        }
+    }
+}
+
+function autoEnhance() {
+    // Apply automatic enhancement settings
+    const autoSettings = {
+        brightness: 10,
+        contrast: 15,
+        saturation: 8,
+        vibrance: 12,
+        exposure: 5
+    };
+    
+    // Update sliders and values
+    Object.keys(autoSettings).forEach(setting => {
+        currentSettings[setting] = autoSettings[setting];
+        const slider = document.getElementById(setting + 'Slider');
+        const valueDisplay = document.getElementById(setting + 'Value');
+        
+        if (slider) slider.value = autoSettings[setting];
+        if (valueDisplay) valueDisplay.textContent = autoSettings[setting];
+    });
+    
+    generatePreview();
+    showMessage('Auto enhancement applied!', 'success');
+}
+
+function resetAll() {
+    // Reset all enhancement settings
+    Object.keys(currentSettings).forEach(setting => {
+        currentSettings[setting] = 0;
+        const slider = document.getElementById(setting + 'Slider');
+        const valueDisplay = document.getElementById(setting + 'Value');
+        
+        if (slider) slider.value = 0;
+        if (valueDisplay) valueDisplay.textContent = '0';
+    });
+    
+    generatePreview();
+    showMessage('All settings reset!', 'info');
+}
+
+function applyFilter(filterName) {
+    // Remove active class from all filters
+    document.querySelectorAll('.filter-option').forEach(opt => {
+        opt.classList.remove('active');
+    });
+    
+    // Add active class to selected filter
+    event.target.closest('.filter-option').classList.add('active');
+    
+    showMessage(`${filterName} filter applied!`, 'success');
+    generatePreview();
+}
+
+function detectSubjects() {
+    showMessage('Detecting subjects...', 'info');
+    
+    fetch(`/editor/{{ photo.id }}/detect-subjects/`)
+    .then(response => response.json())
+    .then(data => {
+        if (data.subjects && data.subjects.length > 0) {
+            showMessage(`Found ${data.subjects.length} subject(s)!`, 'success');
+        } else {
+            showMessage('No subjects detected', 'info');
+        }
+    })
+    .catch(error => {
+        showMessage('Error detecting subjects', 'error');
+    });
+}
+
+function removeBackground() {
+    showMessage('Removing background...', 'info');
+    
+    // Simulate background removal
+    setTimeout(() => {
+        showMessage('Background removed successfully!', 'success');
+        generatePreview();
+    }, 2000);
+}
+
+function setBackground(bgType) {
+    // Remove active class from all bg options
+    document.querySelectorAll('.bg-option').forEach(opt => {
+        opt.classList.remove('active');
+    });
+    
+    // Add active class to selected bg
+    event.target.closest('.bg-option').classList.add('active');
+    
+    showMessage(`Background set to ${bgType}!`, 'success');
+    generatePreview();
+}
+
+function applyEffect(effectName) {
+    showMessage(`${effectName} effect applied!`, 'success');
+    generatePreview();
+}
+
+function applyChanges() {
+    const applyBtn = document.getElementById('applyBtn');
+    const originalText = applyBtn.innerHTML;
+    
+    applyBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Applying...';
+    applyBtn.disabled = true;
+    
+    // Call main apply function
+    if (window.applyChanges) {
+        window.applyChanges();
+    }
+    
+    setTimeout(() => {
+        applyBtn.innerHTML = originalText;
+        applyBtn.disabled = false;
+    }, 2000);
+}
+
+function resetToOriginal() {
+    if (confirm('Reset to original image? All changes will be lost.')) {
+        resetAll();
+        showMessage('Reset to original image!', 'info');
+    }
+}
+
+// Initialize toolbar
+document.addEventListener('DOMContentLoaded', function() {
+    switchCategory('enhance');
+});
+</script>
