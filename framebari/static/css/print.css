@@ -1,0 +1,424 @@
+/* static/css/print.css */
+/* Print Styles */
+@media print {
+    * {
+        background: transparent !important;
+        color: black !important;
+        box-shadow: none !important;
+        text-shadow: none !important;
+    }
+    
+    /* Hide navigation and UI elements */
+    .navbar,
+    .sidebar,
+    .editor-sidebar,
+    .editor-header,
+    .canvas-toolbar,
+    .zoom-controls,
+    .processing-overlay,
+    .modal,
+    .toast,
+    .btn,
+    button,
+    .pagination,
+    .form-actions,
+    .quick-actions,
+    footer,
+    #footer {
+        display: none !important;
+    }
+    
+    /* Page setup */
+    @page {
+        margin: 2cm;
+        size: A4;
+    }
+    
+    /* Typography */
+    body {
+        font-family: 'Times New Roman', serif;
+        font-size: 12pt;
+        line-height: 1.4;
+    }
+    
+    h1, h2, h3, h4, h5, h6 {
+        page-break-after: avoid;
+        font-weight: bold;
+    }
+    
+    h1 {
+        font-size: 18pt;
+        margin-bottom: 1em;
+    }
+    
+    h2 {
+        font-size: 16pt;
+        margin-bottom: 0.8em;
+    }
+    
+    h3 {
+        font-size: 14pt;
+        margin-bottom: 0.6em;
+    }
+    
+    p {
+        margin-bottom: 0.5em;
+        orphans: 3;
+        widows: 3;
+    }
+    
+    /* Links */
+    a[href^="http"]:after {
+        content: " (" attr(href) ")";
+        font-size: 10pt;
+        color: #666;
+    }
+    
+    a[href^="mailto"]:after {
+        content: " (" attr(href) ")";
+        font-size: 10pt;
+        color: #666;
+    }
+    
+    /* Images */
+    img {
+        max-width: 100% !important;
+        height: auto !important;
+        page-break-inside: avoid;
+    }
+    
+    .main-canvas,
+    .editor-image {
+        max-width: 100% !important;
+        max-height: 80vh !important;
+        page-break-inside: avoid;
+        display: block;
+        margin: 1em auto;
+    }
+    
+    /* Tables */
+    table {
+        border-collapse: collapse;
+        width: 100%;
+        font-size: 10pt;
+        page-break-inside: avoid;
+    }
+    
+    th, td {
+        border: 1px solid #ddd;
+        padding: 8px;
+        text-align: left;
+    }
+    
+    th {
+        background-color: #f5f5f5 !important;
+        font-weight: bold;
+    }
+    
+    tr {
+        page-break-inside: avoid;
+    }
+    
+    /* Page breaks */
+    .page-break {
+        page-break-before: always;
+    }
+    
+    .no-break {
+        page-break-inside: avoid;
+    }
+    
+    /* Dashboard print styles */
+    .dashboard-header {
+        text-align: center;
+        margin-bottom: 2em;
+        border-bottom: 2px solid #000;
+        padding-bottom: 1em;
+    }
+    
+    .dashboard-title {
+        font-size: 24pt;
+        font-weight: bold;
+        margin-bottom: 0.5em;
+    }
+    
+    .dashboard-subtitle {
+        font-size: 14pt;
+        color: #666;
+    }
+    
+    .stats-grid {
+        display: block !important;
+    }
+    
+    .stat-card {
+        display: block;
+        border: 1px solid #ddd;
+        margin-bottom: 1em;
+        padding: 1em;
+        page-break-inside: avoid;
+    }
+    
+    .stat-title {
+        font-weight: bold;
+        font-size: 12pt;
+        margin-bottom: 0.5em;
+    }
+    
+    .stat-value {
+        font-size: 18pt;
+        font-weight: bold;
+        margin-bottom: 0.5em;
+    }
+    
+    .photo-grid,
+    .project-grid {
+        display: block !important;
+    }
+    
+    .photo-card,
+    .project-card {
+        display: block;
+        border: 1px solid #ddd;
+        margin-bottom: 1em;
+        padding: 1em;
+        page-break-inside: avoid;
+    }
+    
+    .photo-image {
+        max-width: 150px;
+        max-height: 150px;
+        float: left;
+        margin-right: 1em;
+        margin-bottom: 0.5em;
+    }
+    
+    /* Report styles */
+    .report-header {
+        text-align: center;
+        margin-bottom: 2em;
+        border-bottom: 2px solid #000;
+        padding-bottom: 1em;
+    }
+    
+    .report-title {
+        font-size: 20pt;
+        font-weight: bold;
+        margin-bottom: 0.5em;
+    }
+    
+    .report-date {
+        font-size: 12pt;
+        color: #666;
+    }
+    
+    .report-section {
+        margin-bottom: 2em;
+        page-break-inside: avoid;
+    }
+    
+    .report-section-title {
+        font-size: 16pt;
+        font-weight: bold;
+        margin-bottom: 1em;
+        border-bottom: 1px solid #ddd;
+        padding-bottom: 0.5em;
+    }
+    
+    /* Analytics print styles */
+    .chart-container {
+        page-break-inside: avoid;
+        margin-bottom: 2em;
+    }
+    
+    .chart-title {
+        font-weight: bold;
+        font-size: 14pt;
+        margin-bottom: 1em;
+        text-align: center;
+    }
+    
+    /* Metrics table */
+    .metrics-table {
+        width: 100%;
+        margin-bottom: 2em;
+    }
+    
+    .metrics-table th {
+        background-color: #f0f0f0 !important;
+        font-weight: bold;
+        text-align: center;
+    }
+    
+    .metrics-table td {
+        text-align: center;
+    }
+    
+    /* Photo metadata */
+    .photo-metadata {
+        border: 1px solid #ddd;
+        padding: 1em;
+        margin: 1em 0;
+        page-break-inside: avoid;
+    }
+    
+    .metadata-title {
+        font-weight: bold;
+        font-size: 14pt;
+        margin-bottom: 0.5em;
+    }
+    
+    .metadata-item {
+        margin-bottom: 0.3em;
+    }
+    
+    .metadata-label {
+        font-weight: bold;
+        display: inline-block;
+        width: 120px;
+    }
+    
+    /* Editor specific print styles */
+    .editor-canvas-container {
+        width: 100% !important;
+        height: auto !important;
+    }
+    
+    .canvas-main {
+        display: block !important;
+        text-align: center;
+    }
+    
+    /* Settings summary for print */
+    .settings-summary {
+        border: 1px solid #ddd;
+        padding: 1em;
+        margin: 1em 0;
+        page-break-inside: avoid;
+    }
+    
+    .settings-title {
+        font-weight: bold;
+        font-size: 14pt;
+        margin-bottom: 0.5em;
+    }
+    
+    .settings-list {
+        list-style: none;
+        padding: 0;
+    }
+    
+    .settings-item {
+        margin-bottom: 0.3em;
+        padding: 0.2em 0;
+        border-bottom: 1px dotted #ccc;
+    }
+    
+    .setting-name {
+        font-weight: bold;
+        display: inline-block;
+        width: 120px;
+    }
+    
+    .setting-value {
+        color: #333;
+    }
+    
+    /* Footer information */
+    .print-footer {
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        text-align: center;
+        font-size: 10pt;
+        color: #666;
+        border-top: 1px solid #ddd;
+        padding-top: 0.5em;
+    }
+    
+    /* QR codes and barcodes */
+    .qr-code,
+    .barcode {
+        page-break-inside: avoid;
+        text-align: center;
+        margin: 1em 0;
+    }
+    
+    /* Watermark */
+    .print-watermark {
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%) rotate(-45deg);
+        font-size: 72pt;
+        color: rgba(0, 0, 0, 0.05);
+        z-index: -1;
+        pointer-events: none;
+    }
+    
+    /* Print utilities */
+    .print-only {
+        display: block !important;
+    }
+    
+    .no-print {
+        display: none !important;
+    }
+    
+    .print-break-before {
+        page-break-before: always;
+    }
+    
+    .print-break-after {
+        page-break-after: always;
+    }
+    
+    .print-no-break {
+        page-break-inside: avoid;
+    }
+    
+    /* Color adjustments for print */
+    .text-primary { color: #000 !important; }
+    .text-secondary { color: #666 !important; }
+    .text-success { color: #000 !important; }
+    .text-danger { color: #000 !important; }
+    .text-warning { color: #000 !important; }
+    .text-info { color: #000 !important; }
+    
+    .bg-primary,
+    .bg-secondary,
+    .bg-success,
+    .bg-danger,
+    .bg-warning,
+    .bg-info {
+        background: #f5f5f5 !important;
+        border: 1px solid #ddd !important;
+    }
+}
+
+/* Print preview styles */
+@media screen {
+    .print-preview {
+        background: white;
+        box-shadow: 0 0 20px rgba(0, 0, 0, 0.1);
+        margin: 2rem auto;
+        max-width: 21cm;
+        min-height: 29.7cm;
+        padding: 2cm;
+        position: relative;
+    }
+    
+    .print-preview::before {
+        content: 'Print Preview';
+        position: absolute;
+        top: 0.5cm;
+        right: 0.5cm;
+        background: #007bff;
+        color: white;
+        padding: 0.25rem 0.5rem;
+        border-radius: 4px;
+        font-size: 0.75rem;
+        font-weight: 500;
+    }
+}

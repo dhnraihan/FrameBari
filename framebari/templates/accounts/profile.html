@@ -1,0 +1,301 @@
+<!-- templates/accounts/profile.html -->
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Profile - Photo Editor Pro{% endblock %}
+
+{% block content %}
+<div class="profile-page">
+    <div class="container">
+        <div class="row">
+            <!-- Profile Sidebar -->
+            <div class="col-md-3">
+                <div class="profile-sidebar">
+                    <div class="profile-avatar">
+                        <div class="avatar-circle">
+                            {{ user.username.0|upper }}
+                        </div>
+                        <button class="btn btn-sm btn-outline-primary mt-2">
+                            <i class="fas fa-camera"></i> Change Photo
+                        </button>
+                    </div>
+                    
+                    <nav class="profile-nav">
+                        <ul class="nav nav-pills flex-column">
+                            <li class="nav-item">
+                                <a class="nav-link active" data-tab="general">
+                                    <i class="fas fa-user"></i> General
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link" data-tab="subscription">
+                                    <i class="fas fa-crown"></i> Subscription
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link" data-tab="usage">
+                                    <i class="fas fa-chart-bar"></i> Usage
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link" data-tab="security">
+                                    <i class="fas fa-shield-alt"></i> Security
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link" data-tab="preferences">
+                                    <i class="fas fa-cog"></i> Preferences
+                                </a>
+                            </li>
+                        </ul>
+                    </nav>
+                </div>
+            </div>
+            
+            <!-- Profile Content -->
+            <div class="col-md-9">
+                <!-- General Tab -->
+                <div class="profile-tab active" id="general-tab">
+                    <div class="card">
+                        <div class="card-header">
+                            <h4><i class="fas fa-user"></i> General Information</h4>
+                        </div>
+                        <div class="card-body">
+                            <form method="post">
+                                {% csrf_token %}
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="form-group">
+                                            <label for="first_name">First Name</label>
+                                            <input type="text" class="form-control" id="first_name" name="first_name" value="{{ user.first_name }}">
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="form-group">
+                                            <label for="last_name">Last Name</label>
+                                            <input type="text" class="form-control" id="last_name" name="last_name" value="{{ user.last_name }}">
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <div class="form-group">
+                                    <label for="email">Email Address</label>
+                                    <input type="email" class="form-control" id="email" name="email" value="{{ user.email }}">
+                                </div>
+                                
+                                <div class="form-group">
+                                    <label for="username">Username</label>
+                                    <input type="text" class="form-control" id="username" name="username" value="{{ user.username }}">
+                                </div>
+                                
+                                <div class="form-group">
+                                    <label for="bio">Bio</label>
+                                    <textarea class="form-control" id="bio" name="bio" rows="3" placeholder="Tell us about yourself..."></textarea>
+                                </div>
+                                
+                                <button type="submit" class="btn btn-primary">
+                                    <i class="fas fa-save"></i> Save Changes
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Subscription Tab -->
+                <div class="profile-tab" id="subscription-tab">
+                    <div class="card">
+                        <div class="card-header">
+                            <h4><i class="fas fa-crown"></i> Subscription Details</h4>
+                        </div>
+                        <div class="card-body">
+                            <div class="subscription-status">
+                                <div class="current-plan">
+                                    <h5>Current Plan: <span class="badge bg-primary">{{ profile.subscription_type|title }}</span></h5>
+                                    <p>You're currently on the {{ profile.subscription_type }} plan.</p>
+                                </div>
+                                
+                                <div class="plan-features">
+                                    <h6>Plan Features:</h6>
+                                    <ul>
+                                        <li><i class="fas fa-check text-success"></i> {{ profile.max_photos_per_month }} photos per month</li>
+                                        <li><i class="fas fa-check text-success"></i> {{ profile.max_storage|filesizeformat }} storage</li>
+                                        {% if profile.subscription_type != 'free' %}
+                                        <li><i class="fas fa-check text-success"></i> Priority processing</li>
+                                        <li><i class="fas fa-check text-success"></i> Advanced filters</li>
+                                        <li><i class="fas fa-check text-success"></i> API access</li>
+                                        {% endif %}
+                                    </ul>
+                                </div>
+                                
+                                {% if profile.subscription_type == 'free' %}
+                                <div class="upgrade-prompt">
+                                    <p>Upgrade to unlock more features and higher limits!</p>
+                                    <a href="{% url 'accounts:subscription' %}" class="btn btn-success">
+                                        <i class="fas fa-arrow-up"></i> Upgrade Now
+                                    </a>
+                                </div>
+                                {% else %}
+                                <div class="manage-subscription">
+                                    <a href="{% url 'accounts:subscription' %}" class="btn btn-outline-primary">
+                                        <i class="fas fa-cog"></i> Manage Subscription
+                                    </a>
+                                </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Usage Tab -->
+                <div class="profile-tab" id="usage-tab">
+                    <div class="card">
+                        <div class="card-header">
+                            <h4><i class="fas fa-chart-bar"></i> Usage Statistics</h4>
+                        </div>
+                        <div class="card-body">
+                            <div class="usage-stats">
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="stat-card">
+                                            <h6>Photos This Month</h6>
+                                            <div class="stat-value">{{ profile.photos_processed_this_month }} / {{ profile.max_photos_per_month }}</div>
+                                            <div class="progress">
+                                                <div class="progress-bar" style="width: {{ photos_percentage }}%"></div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="stat-card">
+                                            <h6>Storage Used</h6>
+                                            <div class="stat-value">{{ storage_used_mb|floatformat:2 }} MB / {{ storage_max_mb|floatformat:0 }} MB</div>
+                                            <div class="progress">
+                                                <div class="progress-bar" style="width: {{ storage_percentage }}%"></div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <div class="usage-chart">
+                                    <canvas id="usage-chart" width="400" height="200"></canvas>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Security Tab -->
+                <div class="profile-tab" id="security-tab">
+                    <div class="card">
+                        <div class="card-header">
+                            <h4><i class="fas fa-shield-alt"></i> Security Settings</h4>
+                        </div>
+                        <div class="card-body">
+                            <div class="security-section">
+                                <h5>Password</h5>
+                                <p>Last changed: {{ user.last_login|timesince }} ago</p>
+                                <a href="{% url 'password_change' %}" class="btn btn-outline-primary">
+                                    <i class="fas fa-key"></i> Change Password
+                                </a>
+                            </div>
+                            
+                            <hr>
+                            
+                            <div class="security-section">
+                                <h5>Two-Factor Authentication</h5>
+                                <p>Add an extra layer of security to your account.</p>
+                                <button class="btn btn-outline-success">
+                                    <i class="fas fa-mobile-alt"></i> Enable 2FA
+                                </button>
+                            </div>
+                            
+                            <hr>
+                            
+                            <div class="security-section">
+                                <h5>Active Sessions</h5>
+                                <div class="session-list">
+                                    <div class="session-item">
+                                        <div class="session-info">
+                                            <strong>Current Session</strong>
+                                            <p>{{ request.META.HTTP_USER_AGENT|truncatechars:50 }}</p>
+                                            <small>IP: {{ request.META.REMOTE_ADDR }}</small>
+                                        </div>
+                                        <span class="badge bg-success">Active</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Preferences Tab -->
+                <div class="profile-tab" id="preferences-tab">
+                    <div class="card">
+                        <div class="card-header">
+                            <h4><i class="fas fa-cog"></i> Preferences</h4>
+                        </div>
+                        <div class="card-body">
+                            <form method="post">
+                                {% csrf_token %}
+                                <div class="preference-group">
+                                    <h5>Notifications</h5>
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" id="email_notifications" checked>
+                                        <label class="form-check-label" for="email_notifications">
+                                            Email notifications
+                                        </label>
+                                    </div>
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" id="processing_notifications" checked>
+                                        <label class="form-check-label" for="processing_notifications">
+                                            Processing completion notifications
+                                        </label>
+                                    </div>
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" id="marketing_emails">
+                                        <label class="form-check-label" for="marketing_emails">
+                                            Marketing emails
+                                        </label>
+                                    </div>
+                                </div>
+                                
+                                <div class="preference-group">
+                                    <h5>Interface</h5>
+                                    <div class="form-group">
+                                        <label for="theme">Theme</label>
+                                        <select class="form-control" id="theme">
+                                            <option value="light">Light</option>
+                                            <option value="dark">Dark</option>
+                                            <option value="auto">Auto</option>
+                                        </select>
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="language">Language</label>
+                                        <select class="form-control" id="language">
+                                            <option value="en">English</option>
+                                            <option value="es">Spanish</option>
+                                            <option value="fr">French</option>
+                                            <option value="de">German</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                
+                                <button type="submit" class="btn btn-primary">
+                                    <i class="fas fa-save"></i> Save Preferences
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/profile.css' %}">
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'js/profile.js' %}"></script>
+{% endblock %}

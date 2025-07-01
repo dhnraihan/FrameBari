@@ -1,0 +1,48 @@
+Django
+djangorestframework
+django-cors-headers
+django-extensions
+django-storages
+django-crispy-forms
+crispy-bootstrap5
+
+# Image Processing
+Pillow
+opencv-python
+numpy
+scikit-image
+rembg
+colour-science
+
+# AI/ML
+torch
+torchvision
+transformers
+
+# Async/Background Tasks
+celery
+redis
+channels
+channels-redis
+
+# Database
+psycopg2-binary
+dj-database-url
+
+# Cloud Storage
+boto3
+
+# Production
+gunicorn
+whitenoise
+
+# Utilities
+python-decouple
+Pillow-SIMD
+
+# Development
+django-debug-toolbar
+black
+flake8
+pytest
+pytest-django

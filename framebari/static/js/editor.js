@@ -1,89 +1,318 @@
 // static/js/editor.js
 class PhotoEditor {
-    constructor(photoId) {
+    constructor(photoId, canvasId = 'main-canvas') {
         this.photoId = photoId;
-        this.canvas = null;
-        this.ctx = null;
+        this.canvas = document.getElementById(canvasId);
+        this.ctx = this.canvas ? this.canvas.getContext('2d') : null;
         this.originalImage = null;
         this.currentImage = null;
+        this.imageHistory = [];
+        this.historyIndex = -1;
+        this.maxHistorySize = 20;
+        this.isProcessing = false;
+        
+        // Editor state
         this.settings = {
             brightness: 0,
             contrast: 0,
             saturation: 0,
             vibrance: 0,
             exposure: 0,
+            highlights: 0,
+            shadows: 0,
+            temperature: 0,
+            tint: 0,
+            clarity: 0,
+            structure: 0,
             backgroundStyle: 'solid',
             backgroundColor: '#0066FF'
         };
-        this.subjects = [];
+        
+        // Tools and modes
+        this.currentTool = 'adjust';
         this.selectedSubject = null;
-        this.isProcessing = false;
-        this.websocket = null;
+        this.subjects = [];
+        this.zoom = 1;
+        this.panX = 0;
+        this.panY = 0;
+        
+        // Event handlers
+        this.onImageLoad = null;
+        this.onSettingsChange = null;
+        this.onProcessingStart = null;
+        this.onProcessingComplete = null;
         
         this.init();
     }
     
-    init() {
-        this.setupCanvas();
-        this.bindEvents();
-        this.loadImage();
-        this.connectWebSocket();
-    }
-    
-    setupCanvas() {
-        this.canvas = document.getElementById('main-canvas');
-        if (this.canvas) {
-            this.ctx = this.canvas.getContext('2d');
+    async init() {
+        try {
+            await this.loadImage();
+            this.setupEventListeners();
+            this.setupKeyboardShortcuts();
+            this.initializeCanvas();
+            
+            // Initialize components
+            this.progressTracker = new ProgressTracker();
+            this.notificationManager = new NotificationManager();
+            
+            console.log('Photo Editor initialized successfully');
+        } catch (error) {
+            console.error('Failed to initialize editor:', error);
+            this.notificationManager?.showError('Failed to initialize editor');
         }
     }
     
-    bindEvents() {
-        // Slider events
-        document.querySelectorAll('.range-slider').forEach(slider => {
-            slider.addEventListener('input', (e) => {
-                this.updateSetting(e.target.id, parseInt(e.target.value));
-                this.updateSliderValue(e.target);
-                this.debouncePreview();
-            });
-        });
-        
-        // Background style selection
-        document.querySelectorAll('.bg-style-preview').forEach(preview => {
-            preview.addEventListener('click', (e) => {
-                this.selectBackgroundStyle(e.target.dataset.style);
-            });
-        });
-        
-        // Action buttons
-        this.bindButton('detect-subjects', () => this.detectSubjects());
-        this.bindButton('remove-background', () => this.removeBackground());
-        this.bindButton('apply-effects', () => this.applyEffects());
-        this.bindButton('export-photo', () => this.exportPhoto());
-        this.bindButton('reset-all', () => this.resetSettings());
-        
-        // Keyboard shortcuts
-        document.addEventListener('keydown', (e) => {
-            if (e.ctrlKey || e.metaKey) {
-                switch(e.key) {
-                    case 'z': this.undo(); e.preventDefault(); break;
-                    case 'y': this.redo(); e.preventDefault(); break;
-                    case 's': this.saveProject(); e.preventDefault(); break;
-                    case 'e': this.exportPhoto(); e.preventDefault(); break;
+    async loadImage() {
+        return new Promise((resolve, reject) => {
+            const img = new Image();
+            img.crossOrigin = 'anonymous';
+            
+            img.onload = () => {
+                this.originalImage = img;
+                this.currentImage = img;
+                this.addToHistory(img);
+                this.fitImageToCanvas();
+                
+                if (this.onImageLoad) {
+                    this.onImageLoad(img);
                 }
+                
+                resolve(img);
+            };
+            
+            img.onerror = () => {
+                reject(new Error('Failed to load image'));
+            };
+            
+            // Get image URL from data attribute or API
+            const imageUrl = document.querySelector(`[data-photo-id="${this.photoId}"]`)?.dataset.imageUrl;
+            if (imageUrl) {
+                img.src = imageUrl;
+            } else {
+                reject(new Error('Image URL not found'));
             }
         });
     }
     
-    bindButton(id, callback) {
-        const button = document.getElementById(id);
-        if (button) {
-            button.addEventListener('click', callback);
+    setupEventListeners() {
+        // Canvas events
+        if (this.canvas) {
+            this.canvas.addEventListener('wheel', this.handleZoom.bind(this));
+            this.canvas.addEventListener('mousedown', this.handlePanStart.bind(this));
+            this.canvas.addEventListener('mousemove', this.handlePanMove.bind(this));
+            this.canvas.addEventListener('mouseup', this.handlePanEnd.bind(this));
+            this.canvas.addEventListener('touchstart', this.handleTouchStart.bind(this));
+            this.canvas.addEventListener('touchmove', this.handleTouchMove.bind(this));
+            this.canvas.addEventListener('touchend', this.handleTouchEnd.bind(this));
+        }
+        
+        // Tool selection
+        document.querySelectorAll('.tool-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                this.selectTool(e.target.dataset.tool);
+            });
+        });
+        
+        // Settings sliders
+        document.querySelectorAll('.adjustment-slider').forEach(slider => {
+            slider.addEventListener('input', this.handleSliderChange.bind(this));
+            slider.addEventListener('change', this.handleSliderComplete.bind(this));
+        });
+        
+        // Action buttons
+        this.bindButton('apply-adjustments', () => this.applyAdjustments());
+        this.bindButton('reset-all', () => this.resetAllSettings());
+        this.bindButton('undo', () => this.undo());
+        this.bindButton('redo', () => this.redo());
+        this.bindButton('detect-subjects', () => this.detectSubjects());
+        this.bindButton('remove-background', () => this.removeBackground());
+        this.bindButton('export-photo', () => this.exportPhoto());
+        this.bindButton('save-project', () => this.saveProject());
+    }
+    
+    setupKeyboardShortcuts() {
+        document.addEventListener('keydown', (e) => {
+            if (e.ctrlKey || e.metaKey) {
+                switch(e.key.toLowerCase()) {
+                    case 'z':
+                        if (e.shiftKey) {
+                            this.redo();
+                        } else {
+                            this.undo();
+                        }
+                        e.preventDefault();
+                        break;
+                    case 's':
+                        this.saveProject();
+                        e.preventDefault();
+                        break;
+                    case 'e':
+                        this.exportPhoto();
+                        e.preventDefault();
+                        break;
+                    case '0':
+                        this.resetZoom();
+                        e.preventDefault();
+                        break;
+                    case '=':
+                    case '+':
+                        this.zoomIn();
+                        e.preventDefault();
+                        break;
+                    case '-':
+                        this.zoomOut();
+                        e.preventDefault();
+                        break;
+                }
+            }
+            
+            // Tool shortcuts
+            switch(e.key.toLowerCase()) {
+                case 'v':
+                    this.selectTool('move');
+                    break;
+                case 'c':
+                    this.selectTool('crop');
+                    break;
+                case 'a':
+                    this.selectTool('adjust');
+                    break;
+                case 'f':
+                    this.selectTool('filters');
+                    break;
+                case 'b':
+                    this.selectTool('background');
+                    break;
+                case 'space':
+                    this.selectTool('pan');
+                    e.preventDefault();
+                    break;
+            }
+        });
+    }
+    
+    initializeCanvas() {
+        if (!this.canvas || !this.currentImage) return;
+        
+        this.fitImageToCanvas();
+        this.drawImage();
+    }
+    
+    fitImageToCanvas() {
+        if (!this.canvas || !this.currentImage) return;
+        
+        const container = this.canvas.parentElement;
+        const containerRect = container.getBoundingClientRect();
+        
+        // Set canvas size to container
+        this.canvas.width = containerRect.width;
+        this.canvas.height = containerRect.height;
+        
+        // Calculate fit scale
+        const imageAspect = this.currentImage.width / this.currentImage.height;
+        const canvasAspect = this.canvas.width / this.canvas.height;
+        
+        if (imageAspect > canvasAspect) {
+            this.zoom = this.canvas.width / this.currentImage.width;
+        } else {
+            this.zoom = this.canvas.height / this.currentImage.height;
+        }
+        
+        // Center image
+        this.panX = (this.canvas.width - this.currentImage.width * this.zoom) / 2;
+        this.panY = (this.canvas.height - this.currentImage.height * this.zoom) / 2;
+    }
+    
+    drawImage() {
+        if (!this.ctx || !this.currentImage) return;
+        
+        // Clear canvas
+        this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+        
+        // Draw background
+        this.ctx.fillStyle = '#2a2a2a';
+        this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+        
+        // Draw image
+        this.ctx.save();
+        this.ctx.translate(this.panX, this.panY);
+        this.ctx.scale(this.zoom, this.zoom);
+        this.ctx.drawImage(this.currentImage, 0, 0);
+        this.ctx.restore();
+        
+        // Draw subjects overlay
+        this.drawSubjects();
+        
+        // Draw UI overlays
+        this.drawUIOverlays();
+    }
+    
+    drawSubjects() {
+        if (!this.subjects.length) return;
+        
+        this.ctx.save();
+        this.subjects.forEach((subject, index) => {
+            const isSelected = index === this.selectedSubject;
+            
+            // Transform coordinates
+            const x = (subject.bbox.x * this.zoom) + this.panX;
+            const y = (subject.bbox.y * this.zoom) + this.panY;
+            const width = subject.bbox.width * this.zoom;
+            const height = subject.bbox.height * this.zoom;
+            
+            // Draw bounding box
+            this.ctx.strokeStyle = isSelected ? '#ff6600' : '#00ff00';
+            this.ctx.lineWidth = 2;
+            this.ctx.strokeRect(x, y, width, height);
+            
+            // Draw selection overlay
+            if (isSelected) {
+                this.ctx.fillStyle = 'rgba(255, 102, 0, 0.1)';
+                this.ctx.fillRect(x, y, width, height);
+            }
+            
+            // Draw label
+            this.ctx.fillStyle = isSelected ? '#ff6600' : '#00ff00';
+            this.ctx.font = '12px Arial';
+            this.ctx.fillText(
+                `${subject.type} (${Math.round(subject.confidence * 100)}%)`,
+                x + 5,
+                y - 5
+            );
+        });
+        this.ctx.restore();
+    }
+    
+    drawUIOverlays() {
+        // Draw zoom indicator
+        this.ctx.save();
+        this.ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+        this.ctx.fillRect(10, 10, 100, 30);
+        this.ctx.fillStyle = 'white';
+        this.ctx.font = '14px Arial';
+        this.ctx.fillText(`${Math.round(this.zoom * 100)}%`, 20, 30);
+        this.ctx.restore();
+    }
+    
+    handleSliderChange(e) {
+        const setting = e.target.dataset.setting;
+        const value = parseInt(e.target.value);
+        
+        this.settings[setting] = value;
+        this.updateSliderValue(e.target);
+        
+        // Debounced preview
+        this.debouncePreview();
+        
+        if (this.onSettingsChange) {
+            this.onSettingsChange(this.settings);
         }
     }
     
-    updateSetting(key, value) {
-        this.settings[key] = value;
-        this.saveSettingsToLocal();
+    handleSliderComplete(e) {
+        // Apply final adjustment
+        this.generatePreview();
     }
     
     updateSliderValue(slider) {
@@ -103,513 +332,452 @@ class PhotoEditor {
     async generatePreview() {
         if (this.isProcessing) return;
         
-        this.showProcessing(true);
-        
         try {
-            const response = await fetch(`/editor/${this.photoId}/preview/`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRFToken': this.getCsrfToken()
-                },
-                body: JSON.stringify(this.settings)
+            this.isProcessing = true;
+            this.progressTracker.show('Generating preview...');
+            
+            const response = await API.post(`/editor/${this.photoId}/preview/`, {
+                settings: this.settings
             });
             
-            const data = await response.json();
-            if (data.success) {
-                this.loadPreviewImage(data.preview_url);
+            if (response.success) {
+                await this.loadPreviewImage(response.preview_url);
             }
         } catch (error) {
             console.error('Preview generation failed:', error);
-            this.showError('Preview generation failed');
+            this.notificationManager.showError('Preview generation failed');
         } finally {
-            this.showProcessing(false);
+            this.isProcessing = false;
+            this.progressTracker.hide();
         }
     }
     
-    loadImage() {
-        const img = new Image();
-        img.onload = () => {
-            this.originalImage = img;
-            this.currentImage = img;
-            this.drawImage();
-            this.loadSettingsFromLocal();
-        };
-        img.onerror = () => {
-            this.showError('Failed to load image');
-        };
-        img.src = document.querySelector('[data-original-url]').dataset.originalUrl;
+    async loadPreviewImage(url) {
+        return new Promise((resolve, reject) => {
+            const img = new Image();
+            img.crossOrigin = 'anonymous';
+            
+            img.onload = () => {
+                this.currentImage = img;
+                this.drawImage();
+                resolve(img);
+            };
+            
+            img.onerror = reject;
+            img.src = url + '?t=' + Date.now();
+        });
     }
     
-    loadPreviewImage(url) {
-        const img = new Image();
-        img.onload = () => {
-            this.currentImage = img;
-            this.drawImage();
-        };
-        img.src = url + '?t=' + new Date().getTime();
-    }
-    
-    drawImage() {
-        if (!this.canvas || !this.currentImage) return;
+    async applyAdjustments() {
+        if (this.isProcessing) return;
         
-        const containerWidth = this.canvas.parentElement.clientWidth;
-        const containerHeight = this.canvas.parentElement.clientHeight;
-        
-        const imageAspect = this.currentImage.width / this.currentImage.height;
-        const containerAspect = containerWidth / containerHeight;
-        
-        let displayWidth, displayHeight;
-        
-        if (imageAspect > containerAspect) {
-            displayWidth = containerWidth * 0.9;
-            displayHeight = displayWidth / imageAspect;
-        } else {
-            displayHeight = containerHeight * 0.9;
-            displayWidth = displayHeight * imageAspect;
+        try {
+            this.isProcessing = true;
+            this.progressTracker.show('Applying adjustments...');
+            
+            if (this.onProcessingStart) {
+                this.onProcessingStart();
+            }
+            
+            const response = await API.post(`/editor/${this.photoId}/apply/`, {
+                settings: this.settings
+            });
+            
+            if (response.success) {
+                await this.loadPreviewImage(response.processed_url);
+                this.addToHistory(this.currentImage);
+                this.notificationManager.showSuccess('Adjustments applied successfully!');
+                
+                if (this.onProcessingComplete) {
+                    this.onProcessingComplete(response);
+                }
+            }
+        } catch (error) {
+            console.error('Apply adjustments failed:', error);
+            this.notificationManager.showError('Failed to apply adjustments');
+        } finally {
+            this.isProcessing = false;
+            this.progressTracker.hide();
         }
-        
-        this.canvas.width = displayWidth;
-        this.canvas.height = displayHeight;
-        
-        this.ctx.clearRect(0, 0, displayWidth, displayHeight);
-        this.ctx.drawImage(this.currentImage, 0, 0, displayWidth, displayHeight);
-        
-        // Draw subjects if any
-        this.drawSubjects();
     }
     
     async detectSubjects() {
-        this.showProcessing(true);
+        if (this.isProcessing) return;
         
         try {
-            const response = await fetch(`/editor/${this.photoId}/detect-subjects/`);
-            const data = await response.json();
+            this.isProcessing = true;
+            this.progressTracker.show('Detecting subjects...');
             
-            if (data.subjects) {
-                this.subjects = data.subjects;
-                this.drawSubjects();
+            const response = await API.get(`/editor/${this.photoId}/detect-subjects/`);
+            
+            if (response.subjects) {
+                this.subjects = response.subjects;
+                this.drawImage();
                 this.showSubjectControls();
+                this.notificationManager.showSuccess(`Found ${this.subjects.length} subjects`);
             }
         } catch (error) {
             console.error('Subject detection failed:', error);
-            this.showError('Subject detection failed');
+            this.notificationManager.showError('Subject detection failed');
         } finally {
-            this.showProcessing(false);
+            this.isProcessing = false;
+            this.progressTracker.hide();
         }
-    }
-    
-    drawSubjects() {
-        // Clear existing overlays
-        document.querySelectorAll('.subject-overlay').forEach(el => el.remove());
-        
-        if (!this.subjects.length) return;
-        
-        const container = this.canvas.parentElement;
-        const canvasRect = this.canvas.getBoundingClientRect();
-        const containerRect = container.getBoundingClientRect();
-        
-        const scaleX = this.canvas.width / this.originalImage.width;
-        const scaleY = this.canvas.height / this.originalImage.height;
-        
-        this.subjects.forEach((subject, index) => {
-            const overlay = document.createElement('div');
-            overlay.className = 'subject-overlay';
-            overlay.dataset.subjectIndex = index;
-            
-            const x = subject.bbox.x * scaleX + (canvasRect.left - containerRect.left);
-            const y = subject.bbox.y * scaleY + (canvasRect.top - containerRect.top);
-            const width = subject.bbox.width * scaleX;
-            const height = subject.bbox.height * scaleY;
-            
-            overlay.style.cssText = `
-                left: ${x}px;
-                top: ${y}px;
-                width: ${width}px;
-                height: ${height}px;
-            `;
-            
-            const label = document.createElement('div');
-            label.className = 'subject-label';
-            label.textContent = `${subject.type} (${Math.round(subject.confidence * 100)}%)`;
-            overlay.appendChild(label);
-            
-            overlay.addEventListener('click', () => {
-                this.selectSubject(index);
-            });
-            
-            container.appendChild(overlay);
-        });
-    }
-    
-    selectSubject(index) {
-        // Remove previous selection
-        document.querySelectorAll('.subject-overlay').forEach(el => {
-            el.classList.remove('selected');
-        });
-        
-        // Select new subject
-        const overlay = document.querySelector(`[data-subject-index="${index}"]`);
-        if (overlay) {
-            overlay.classList.add('selected');
-            this.selectedSubject = index;
-            this.showSubjectSpecificControls();
-        }
-    }
-    
-    showSubjectSpecificControls() {
-        const subject = this.subjects[this.selectedSubject];
-        if (!subject) return;
-        
-        // Create or update subject controls
-        let controlsPanel = document.getElementById('subject-controls');
-        if (!controlsPanel) {
-            controlsPanel = document.createElement('div');
-            controlsPanel.id = 'subject-controls';
-            controlsPanel.className = 'tool-group';
-            document.querySelector('.editor-sidebar').appendChild(controlsPanel);
-        }
-        
-        controlsPanel.innerHTML = `
-            <h6>Subject Controls</h6>
-            <p><strong>Type:</strong> ${subject.type}</p>
-            <p><strong>Confidence:</strong> ${Math.round(subject.confidence * 100)}%</p>
-            
-            <div class="slider-container">
-                <label>Subject Brightness</label>
-                <input type="range" class="range-slider" id="subject-brightness" 
-                       min="-100" max="100" value="0">
-                <span class="slider-value">0</span>
-            </div>
-            
-            <div class="slider-container">
-                <label>Subject Saturation</label>
-                <input type="range" class="range-slider" id="subject-saturation" 
-                       min="-100" max="100" value="0">
-                <span class="slider-value">0</span>
-            </div>
-            
-            <select id="subject-lut" class="form-select mb-3">
-                <option value="">No Effect</option>
-                <option value="warm">Warm Tone</option>
-                <option value="cool">Cool Tone</option>
-                <option value="vintage">Vintage</option>
-                <option value="dramatic">Dramatic</option>
-            </select>
-            
-            <button class="btn btn-sm btn-primary" onclick="editor.applySubjectEffects()">
-                Apply to Subject
-            </button>
-        `;
-        
-        // Bind new events
-        controlsPanel.querySelectorAll('.range-slider').forEach(slider => {
-            slider.addEventListener('input', (e) => {
-                this.updateSliderValue(e.target);
-            });
-        });
-    }
-    
-    selectBackgroundStyle(style) {
-        document.querySelectorAll('.bg-style-preview').forEach(el => {
-            el.classList.remove('active');
-        });
-        
-        document.querySelector(`[data-style="${style}"]`).classList.add('active');
-        this.updateSetting('backgroundStyle', style);
-        this.debouncePreview();
     }
     
     async removeBackground() {
-        this.showProcessing(true);
+        if (this.isProcessing) return;
         
         try {
-            const response = await fetch(`/editor/${this.photoId}/remove-background/`, {
-                method: 'POST',
-                headers: {
-                    'X-CSRFToken': this.getCsrfToken()
-                }
-            });
+            this.isProcessing = true;
+            this.progressTracker.show('Removing background...');
             
-            const data = await response.json();
-            if (data.success) {
-                this.loadPreviewImage(data.preview_url);
+            const response = await API.post(`/editor/${this.photoId}/remove-background/`);
+            
+            if (response.success) {
+                await this.loadPreviewImage(response.preview_url);
+                this.addToHistory(this.currentImage);
+                this.notificationManager.showSuccess('Background removed successfully!');
             }
         } catch (error) {
             console.error('Background removal failed:', error);
-            this.showError('Background removal failed');
+            this.notificationManager.showError('Background removal failed');
         } finally {
-            this.showProcessing(false);
+            this.isProcessing = false;
+            this.progressTracker.hide();
         }
     }
     
-    async applyEffects() {
-        this.showProcessing(true);
+    selectTool(tool) {
+        this.currentTool = tool;
         
-        try {
-            const response = await fetch(`/editor/${this.photoId}/apply/`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRFToken': this.getCsrfToken()
-                },
-                body: JSON.stringify(this.settings)
+        // Update UI
+        document.querySelectorAll('.tool-btn').forEach(btn => {
+            btn.classList.remove('active');
+        });
+        
+        document.querySelector(`[data-tool="${tool}"]`)?.classList.add('active');
+        
+        // Show/hide tool panels
+        document.querySelectorAll('.tool-panel').forEach(panel => {
+            panel.style.display = 'none';
+        });
+        
+        document.getElementById(`${tool}-panel`)?.style.display = 'block';
+        
+        // Update cursor
+        this.updateCursor();
+    }
+    
+    updateCursor() {
+        if (!this.canvas) return;
+        
+        switch(this.currentTool) {
+            case 'move':
+                this.canvas.style.cursor = 'move';
+                break;
+            case 'crop':
+                this.canvas.style.cursor = 'crosshair';
+                break;
+            case 'pan':
+                this.canvas.style.cursor = 'grab';
+                break;
+            default:
+                this.canvas.style.cursor = 'default';
+        }
+    }
+    
+    // History management
+    addToHistory(image) {
+        // Remove any history after current index
+        this.imageHistory = this.imageHistory.slice(0, this.historyIndex + 1);
+        
+        // Add new state
+        this.imageHistory.push(this.cloneImage(image));
+        this.historyIndex++;
+        
+        // Limit history size
+        if (this.imageHistory.length > this.maxHistorySize) {
+            this.imageHistory.shift();
+            this.historyIndex--;
+        }
+        
+        this.updateHistoryButtons();
+    }
+    
+    undo() {
+        if (this.historyIndex > 0) {
+            this.historyIndex--;
+            this.currentImage = this.imageHistory[this.historyIndex];
+            this.drawImage();
+            this.updateHistoryButtons();
+            this.notificationManager.showInfo('Undone');
+        }
+    }
+    
+    redo() {
+        if (this.historyIndex < this.imageHistory.length - 1) {
+            this.historyIndex++;
+            this.currentImage = this.imageHistory[this.historyIndex];
+            this.drawImage();
+            this.updateHistoryButtons();
+            this.notificationManager.showInfo('Redone');
+        }
+    }
+    
+    updateHistoryButtons() {
+        const undoBtn = document.getElementById('undo');
+        const redoBtn = document.getElementById('redo');
+        
+        if (undoBtn) {
+            undoBtn.disabled = this.historyIndex <= 0;
+        }
+        
+        if (redoBtn) {
+            redoBtn.disabled = this.historyIndex >= this.imageHistory.length - 1;
+        }
+    }
+    
+    cloneImage(image) {
+        const canvas = document.createElement('canvas');
+        const ctx = canvas.getContext('2d');
+        canvas.width = image.width;
+        canvas.height = image.height;
+        ctx.drawImage(image, 0, 0);
+        
+        const clonedImage = new Image();
+        clonedImage.src = canvas.toDataURL();
+        return clonedImage;
+    }
+    
+    // Zoom and pan
+    handleZoom(e) {
+        e.preventDefault();
+        
+        const rect = this.canvas.getBoundingClientRect();
+        const mouseX = e.clientX - rect.left;
+        const mouseY = e.clientY - rect.top;
+        
+        const delta = e.deltaY > 0 ? 0.9 : 1.1;
+        const newZoom = Math.max(0.1, Math.min(5, this.zoom * delta));
+        
+        // Zoom toward mouse position
+        this.panX = mouseX - (mouseX - this.panX) * (newZoom / this.zoom);
+        this.panY = mouseY - (mouseY - this.panY) * (newZoom / this.zoom);
+        this.zoom = newZoom;
+        
+        this.drawImage();
+    }
+    
+    zoomIn() {
+        this.zoom = Math.min(5, this.zoom * 1.2);
+        this.drawImage();
+    }
+    
+    zoomOut() {
+        this.zoom = Math.max(0.1, this.zoom * 0.8);
+        this.drawImage();
+    }
+    
+    resetZoom() {
+        this.fitImageToCanvas();
+        this.drawImage();
+    }
+    
+    // Pan handling
+    handlePanStart(e) {
+        if (this.currentTool !== 'pan' && this.currentTool !== 'move') return;
+        
+        this.isPanning = true;
+        this.lastPanX = e.clientX;
+        this.lastPanY = e.clientY;
+        this.canvas.style.cursor = 'grabbing';
+    }
+    
+    handlePanMove(e) {
+        if (!this.isPanning) return;
+        
+        const deltaX = e.clientX - this.lastPanX;
+        const deltaY = e.clientY - this.lastPanY;
+        
+        this.panX += deltaX;
+        this.panY += deltaY;
+        
+        this.lastPanX = e.clientX;
+        this.lastPanY = e.clientY;
+        
+        this.drawImage();
+    }
+    
+    handlePanEnd() {
+        if (this.isPanning) {
+            this.isPanning = false;
+            this.updateCursor();
+        }
+    }
+    
+    // Touch handling
+    handleTouchStart(e) {
+        e.preventDefault();
+        
+        if (e.touches.length === 1) {
+            this.handlePanStart({
+                clientX: e.touches[0].clientX,
+                clientY: e.touches[0].clientY
             });
-            
-            const data = await response.json();
-            if (data.success) {
-                this.loadPreviewImage(data.processed_url);
-                this.showSuccess('Effects applied successfully!');
-            }
-        } catch (error) {
-            console.error('Apply effects failed:', error);
-            this.showError('Failed to apply effects');
-        } finally {
-            this.showProcessing(false);
+        } else if (e.touches.length === 2) {
+            this.startPinchZoom(e);
         }
     }
     
-    async exportPhoto() {
-        this.showProcessing(true);
+    handleTouchMove(e) {
+        e.preventDefault();
         
+        if (e.touches.length === 1 && this.isPanning) {
+            this.handlePanMove({
+                clientX: e.touches[0].clientX,
+                clientY: e.touches[0].clientY
+            });
+        } else if (e.touches.length === 2) {
+            this.handlePinchZoom(e);
+        }
+    }
+    
+    handleTouchEnd(e) {
+        e.preventDefault();
+        this.handlePanEnd();
+        this.isPinching = false;
+    }
+    
+    startPinchZoom(e) {
+        const touch1 = e.touches[0];
+        const touch2 = e.touches[1];
+        this.initialPinchDistance = Math.sqrt(
+            Math.pow(touch2.clientX - touch1.clientX, 2) +
+            Math.pow(touch2.clientY - touch1.clientY, 2)
+        );
+        this.isPinching = true;
+    }
+    
+    handlePinchZoom(e) {
+        if (!this.isPinching) return;
+        
+        const touch1 = e.touches[0];
+        const touch2 = e.touches[1];
+        const currentDistance = Math.sqrt(
+            Math.pow(touch2.clientX - touch1.clientX, 2) +
+            Math.pow(touch2.clientY - touch1.clientY, 2)
+        );
+        
+        const scale = currentDistance / this.initialPinchDistance;
+        this.zoom = Math.max(0.1, Math.min(5, this.zoom * scale));
+        this.initialPinchDistance = currentDistance;
+        
+        this.drawImage();
+    }
+    
+    // Export and save
+    async exportPhoto() {
         try {
+            this.progressTracker.show('Exporting photo...');
+            
             const exportSettings = {
-                ...this.settings,
                 format: document.getElementById('export-format')?.value || 'JPEG',
-                quality: document.getElementById('export-quality')?.value || 85
+                quality: document.getElementById('export-quality')?.value || 85,
+                ...this.settings
             };
             
-            const response = await fetch(`/editor/${this.photoId}/export/`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRFToken': this.getCsrfToken()
-                },
-                body: JSON.stringify(exportSettings)
-            });
+            const response = await API.post(`/editor/${this.photoId}/export/`, exportSettings);
             
-            const data = await response.json();
-            if (data.success) {
+            if (response.success) {
                 // Trigger download
                 const link = document.createElement('a');
-                link.href = data.download_url;
-                link.download = data.filename;
+                link.href = response.download_url;
+                link.download = response.filename;
                 document.body.appendChild(link);
                 link.click();
                 document.body.removeChild(link);
                 
-                this.showSuccess('Photo exported successfully!');
+                this.notificationManager.showSuccess('Photo exported successfully!');
             }
         } catch (error) {
             console.error('Export failed:', error);
-            this.showError('Export failed');
+            this.notificationManager.showError('Export failed');
         } finally {
-            this.showProcessing(false);
+            this.progressTracker.hide();
         }
     }
     
-    resetSettings() {
-        this.settings = {
-            brightness: 0,
-            contrast: 0,
-            saturation: 0,
-            vibrance: 0,
-            exposure: 0,
-            backgroundStyle: 'solid',
-            backgroundColor: '#0066FF'
-        };
+    async saveProject() {
+        try {
+            const response = await API.post(`/editor/${this.photoId}/save/`, {
+                settings: this.settings
+            });
+            
+            if (response.success) {
+                this.notificationManager.showSuccess('Project saved!');
+            }
+        } catch (error) {
+            console.error('Save failed:', error);
+            this.notificationManager.showError('Save failed');
+        }
+    }
+    
+    resetAllSettings() {
+        // Reset all settings to default
+        Object.keys(this.settings).forEach(key => {
+            if (typeof this.settings[key] === 'number') {
+                this.settings[key] = 0;
+            }
+        });
         
         // Update UI
-        document.querySelectorAll('.range-slider').forEach(slider => {
+        document.querySelectorAll('.adjustment-slider').forEach(slider => {
             slider.value = 0;
             this.updateSliderValue(slider);
         });
         
-        // Reload original image
+        // Reset to original image
         this.currentImage = this.originalImage;
         this.drawImage();
         
-        this.saveSettingsToLocal();
+        this.notificationManager.showInfo('All settings reset');
     }
     
-    connectWebSocket() {
-        const wsScheme = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-        const wsUrl = `${wsScheme}//${window.location.host}/ws/editor/${this.photoId}/`;
-        
-        this.websocket = new WebSocket(wsUrl);
-        
-        this.websocket.onopen = () => {
-            console.log('WebSocket connected');
-        };
-        
-        this.websocket.onmessage = (event) => {
-            const data = JSON.parse(event.data);
-            this.handleWebSocketMessage(data);
-        };
-        
-        this.websocket.onclose = () => {
-            console.log('WebSocket disconnected');
-            // Attempt to reconnect after 3 seconds
-            setTimeout(() => {
-                this.connectWebSocket();
-            }, 3000);
-        };
-    }
-    
-    handleWebSocketMessage(data) {
-        if (data.type === 'processing_update') {
-            this.updateProcessingProgress(data.progress, data.status);
+    showSubjectControls() {
+        // Show subject-specific controls
+        const controlsPanel = document.getElementById('subject-controls');
+        if (controlsPanel) {
+            controlsPanel.style.display = 'block';
         }
     }
     
-    updateProcessingProgress(progress, status) {
-        const progressBar = document.querySelector('.progress-bar');
-        if (progressBar) {
-            progressBar.style.width = `${progress}%`;
-            progressBar.textContent = `${progress}%`;
-        }
-        
-        const statusText = document.querySelector('.processing-status');
-        if (statusText) {
-            statusText.textContent = status;
+    bindButton(id, callback) {
+        const button = document.getElementById(id);
+        if (button) {
+            button.addEventListener('click', callback);
         }
     }
     
-    showProcessing(show) {
-        this.isProcessing = show;
-        const overlay = document.querySelector('.processing-overlay');
-        if (overlay) {
-            overlay.style.display = show ? 'flex' : 'none';
+    destroy() {
+        // Cleanup event listeners and resources
+        if (this.canvas) {
+            this.canvas.removeEventListener('wheel', this.handleZoom);
+            this.canvas.removeEventListener('mousedown', this.handlePanStart);
+            this.canvas.removeEventListener('mousemove', this.handlePanMove);
+            this.canvas.removeEventListener('mouseup', this.handlePanEnd);
         }
         
-        // Disable/enable controls
-        document.querySelectorAll('.range-slider, button, select').forEach(el => {
-            el.disabled = show;
-        });
-    }
-    
-    showSuccess(message) {
-        this.showToast(message, 'success');
-    }
-    
-    showError(message) {
-        this.showToast(message, 'error');
-    }
-    
-    showToast(message, type = 'info') {
-        const toast = document.createElement('div');
-        toast.className = `toast toast-${type}`;
-        toast.innerHTML = `
-            <div class="toast-content">
-                <i class="fas fa-${type === 'success' ? 'check' : type === 'error' ? 'times' : 'info'}-circle"></i>
-                <span>${message}</span>
-            </div>
-        `;
-        
-        document.body.appendChild(toast);
-        
-        // Animate in
-        setTimeout(() => toast.classList.add('show'), 100);
-        
-        // Remove after 3 seconds
-        setTimeout(() => {
-            toast.classList.remove('show');
-            setTimeout(() => document.body.removeChild(toast), 300);
-        }, 3000);
-    }
-    
-    saveSettingsToLocal() {
-        localStorage.setItem(`editor-settings-${this.photoId}`, JSON.stringify(this.settings));
-    }
-    
-    loadSettingsFromLocal() {
-        const saved = localStorage.getItem(`editor-settings-${this.photoId}`);
-        if (saved) {
-            this.settings = {...this.settings, ...JSON.parse(saved)};
-            this.applySavedSettings();
-        }
-    }
-    
-    applySavedSettings() {
-        Object.keys(this.settings).forEach(key => {
-            const element = document.getElementById(key);
-            if (element) {
-                element.value = this.settings[key];
-                this.updateSliderValue(element);
-            }
-        });
-    }
-    
-    getCsrfToken() {
-        return document.querySelector('[name=csrfmiddlewaretoken]')?.value || 
-               document.querySelector('meta[name=csrf-token]')?.getAttribute('content') || '';
+        clearTimeout(this.previewTimeout);
+        this.imageHistory = [];
+        this.subjects = [];
     }
 }
 
-// Toast CSS (add to main.css)
-const toastCSS = `
-.toast {
-    position: fixed;
-    top: 20px;
-    right: 20px;
-    background: white;
-    padding: 1rem 1.5rem;
-    border-radius: 8px;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-    z-index: 9999;
-    transform: translateX(100%);
-    transition: transform 0.3s ease;
-    max-width: 400px;
-}
-
-.toast.show {
-    transform: translateX(0);
-}
-
-.toast.toast-success {
-    border-left: 4px solid #28a745;
-}
-
-.toast.toast-error {
-    border-left: 4px solid #dc3545;
-}
-
-.toast.toast-info {
-    border-left: 4px solid #007bff;
-}
-
-.toast-content {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-}
-
-.toast-content i {
-    font-size: 1.25rem;
-}
-
-.toast-success .toast-content i {
-    color: #28a745;
-}
-
-.toast-error .toast-content i {
-    color: #dc3545;
-}
-
-.toast-info .toast-content i {
-    color: #007bff;
-}
-`;
-
-// Inject toast CSS
-const style = document.createElement('style');
-style.textContent = toastCSS;
-document.head.appendChild(style);
-
-// Initialize editor when DOM is loaded
+// Initialize editor when DOM is ready
 document.addEventListener('DOMContentLoaded', () => {
     const photoId = document.querySelector('[data-photo-id]')?.dataset.photoId;
     if (photoId) {
-        window.editor = new PhotoEditor(photoId);
+        window.photoEditor = new PhotoEditor(photoId);
     }
 });
